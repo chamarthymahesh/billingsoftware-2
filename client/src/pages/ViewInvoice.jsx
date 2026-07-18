@@ -59,6 +59,16 @@ const ViewInvoice = () => {
     return 'status-unpaid';
   };
 
+  const templates = invoice.company?.invoiceTemplates || {};
+  const primaryColor = templates.primaryColor || '#2563eb';
+  const secondaryColor = templates.secondaryColor || '#10b981';
+  const fontFamily = templates.fontFamily || 'Inter';
+  const addressFontSize = templates.companyAddressFontSize || '14px';
+  const showLogo = templates.showLogo !== false;
+  const showSignature = templates.showSignature !== false;
+  const logoImage = templates.logoImage || '';
+  const invoiceTitle = templates.invoiceTitle || (isGst ? 'TAX INVOICE' : 'INVOICE');
+
   return (
     <div className="sl-page">
       <div className="sl-header no-print">
@@ -74,17 +84,26 @@ const ViewInvoice = () => {
         </button>
       </div>
 
-      <div className={`invoice-container ${templateClass}`}>
+      <div className={`invoice-container ${templateClass}`} style={{
+        fontFamily: `${fontFamily}, sans-serif`,
+        '--primary-color': primaryColor,
+        '--secondary-color': secondaryColor,
+        '--secondary-bg-color': `${secondaryColor}15`
+      }}>
         {/* Invoice Header */}
         <div className="invoice-header">
-          <div className="company-info">
-            <h1 className="company-name">{invoice.company?.name}</h1>
+          <div className="company-info" style={{ fontSize: addressFontSize }}>
+            {showLogo && logoImage ? (
+              <img src={logoImage} alt="Company Logo" style={{ maxHeight: '80px', marginBottom: '12px', objectFit: 'contain' }} />
+            ) : (
+              <h1 className="company-name">{invoice.company?.name}</h1>
+            )}
             <p>{invoice.company?.address}</p>
             <p>GSTIN: {invoice.company?.gstin || 'N/A'} | Phone: {invoice.company?.phone}</p>
             {invoice.company?.email && <p>Email: {invoice.company.email}</p>}
           </div>
           <div className="invoice-meta">
-            <h2 className="invoice-type">{isGst ? 'TAX INVOICE' : 'INVOICE'}</h2>
+            <h2 className="invoice-type" style={{ background: `${primaryColor}15` }}>{invoiceTitle}</h2>
             <div className="meta-row">
               <span className="meta-label">Invoice #:</span>
               <span className="meta-value">{invoice.invoiceNumber}</span>
@@ -219,21 +238,23 @@ const ViewInvoice = () => {
         </div>
 
         {/* Footer */}
-        <div className="invoice-footer">
-          <div className="footer-sign" style={{ textAlign: 'center' }}>
-            {invoice.company?.signatureImage ? (
-              <img 
-                src={invoice.company.signatureImage} 
-                alt="Digital Signature" 
-                style={{ maxHeight: '80px', maxWidth: '200px', objectFit: 'contain', marginBottom: '10px' }} 
-              />
-            ) : (
-              <div style={{ height: '80px' }}></div>
-            )}
-            <div className="sign-line"></div>
-            <p>Authorized Signatory</p>
+        {showSignature && (
+          <div className="invoice-footer">
+            <div className="footer-sign" style={{ textAlign: 'center' }}>
+              {invoice.company?.signatureImage ? (
+                <img 
+                  src={invoice.company.signatureImage} 
+                  alt="Digital Signature" 
+                  style={{ maxHeight: '80px', maxWidth: '200px', objectFit: 'contain', marginBottom: '10px' }} 
+                />
+              ) : (
+                <div style={{ height: '80px' }}></div>
+              )}
+              <div className="sign-line"></div>
+              <p>Authorized Signatory</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

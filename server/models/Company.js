@@ -40,7 +40,15 @@ const companySchema = mongoose.Schema(
       termsAndConditions: { 
         type: String, 
         default: '1. Goods once sold will not be taken back.\n2. Interest @18% p.a. will be charged if payment is not made within due date.' 
-      }
+      },
+      primaryColor: { type: String, default: '#2563eb' },
+      secondaryColor: { type: String, default: '#475569' },
+      logoImage: { type: String, default: '' },
+      fontFamily: { type: String, default: 'Inter' },
+      showLogo: { type: Boolean, default: true },
+      showSignature: { type: Boolean, default: true },
+      invoiceTitle: { type: String, default: 'TAX INVOICE' },
+      companyAddressFontSize: { type: String, default: '14px' }
     }
   },
   {
