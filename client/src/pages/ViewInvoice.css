@@ -338,7 +338,7 @@
   .company-name { font-size: 1.8rem !important; margin-bottom: 4px !important; }
   .invoice-type { padding: 4px 12px !important; font-size: 1.1rem !important; margin-bottom: 8px !important; }
   .divider { margin: 20px 0 !important; }
-  .address-container { margin-bottom: 20px !important; gap: 30px !important; }
+  .address-container { display: flex !important; flex-direction: row !important; margin-bottom: 20px !important; gap: 30px !important; }
   .section-title { font-size: 0.9rem !important; margin-bottom: 8px !important; }
   .customer-name { font-size: 1.1rem !important; }
   .invoice-table { margin-bottom: 24px !important; }
