@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Building2, TrendingUp, DollarSign, Activity, ShoppingCart, Truck, Percent } from 'lucide-react';
 import './Sales.css'; 
 
-const API = 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Dashboard = () => {
   const navigate = useNavigate();

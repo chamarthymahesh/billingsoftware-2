@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Plus, TrendingUp, DollarSign, FileText, CheckCircle, Search, Eye, Edit, Trash2 } from 'lucide-react';
 import './Sales.css';
 
-const API = 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Sales = () => {
   const navigate = useNavigate();

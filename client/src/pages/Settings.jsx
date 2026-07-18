@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Save, Building2, Image as ImageIcon, CreditCard, FileText } from 'lucide-react';
 import './Settings.css';
 
-const API = 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Settings = () => {
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');

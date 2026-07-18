@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Search, Package, AlertTriangle, TrendingUp } from 'lucide-react';
 import './Products.css'; // Reusing existing styles where possible, or we can use App.css
 
-const API = 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const GlobalStock = () => {
   const [products, setProducts] = useState([]);

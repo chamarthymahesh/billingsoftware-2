@@ -5,7 +5,7 @@ import { ArrowLeft, Plus, Trash2, Save, FileText, User, Package, IndianRupee, Re
 import CreatableSelect from '../components/CreatableSelect';
 import './CreateInvoice.css';
 
-const API = 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
 const INDIAN_STATES = [

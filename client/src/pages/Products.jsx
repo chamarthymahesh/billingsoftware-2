@@ -8,7 +8,7 @@ import {
 import CreatableSelect from '../components/CreatableSelect';
 import './Products.css';
 
-const API = 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const toProperCase = (str = '') =>
   str.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());

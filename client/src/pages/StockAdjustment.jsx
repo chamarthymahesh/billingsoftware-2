@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Search, Save, AlertTriangle, Check } from 'lucide-react';
 import './Products.css';
 
-const API = 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const StockAdjustment = () => {
   const [products, setProducts] = useState([]);

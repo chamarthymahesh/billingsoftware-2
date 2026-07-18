@@ -3,7 +3,7 @@ import axios from 'axios';
 import { FileText, Download, Filter } from 'lucide-react';
 import './Sales.css';
 
-const API = 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 const GSTR1Report = () => {

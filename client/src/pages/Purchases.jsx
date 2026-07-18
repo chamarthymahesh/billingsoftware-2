@@ -5,7 +5,7 @@ import RecordPurchaseModal from '../components/RecordPurchaseModal';
 import PurchaseViewModal from '../components/PurchaseViewModal';
 import './Purchases.css';
 
-const API = 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Purchases = () => {
   const [purchases, setPurchases] = useState([]);

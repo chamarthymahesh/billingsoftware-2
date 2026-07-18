@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Plus, Trash2, KeyRound, Eye, X, Building2, Shield, Phone, Mail, MapPin, Hash } from 'lucide-react';
 import './Companies.css';
 
-const API = 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Companies = () => {
   const [companies, setCompanies] = useState([]);

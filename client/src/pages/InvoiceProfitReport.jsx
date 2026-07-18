@@ -3,6 +3,8 @@ import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './InvoiceProfitReport.css';
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const InvoiceProfitReport = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +33,7 @@ const InvoiceProfitReport = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem('userInfo'));
       await axios.put(
-        'http://localhost:5000/api/invoices/bulk-commission-status',
+        `${API}/api/invoices/bulk-commission-status`,
         { invoiceIds: selectedInvoices, status },
         { headers: { Authorization: `Bearer ${userInfo.token}` } }
       );
@@ -51,7 +53,7 @@ const InvoiceProfitReport = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem('userInfo'));
       await axios.put(
-        'http://localhost:5000/api/invoices/bulk-commission-status',
+        `${API}/api/invoices/bulk-commission-status`,
         { invoiceIds: [id], status },
         { headers: { Authorization: `Bearer ${userInfo.token}` } }
       );
@@ -73,7 +75,7 @@ const InvoiceProfitReport = () => {
           },
         };
 
-        const { data } = await axios.get('http://localhost:5000/api/reports/invoice-profit', config);
+        const { data } = await axios.get(`${API}/api/reports/invoice-profit`, config);
         setReports(Array.isArray(data) ? data : []);
         setLoading(false);
       } catch (err) {

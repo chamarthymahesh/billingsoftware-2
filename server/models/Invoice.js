@@ -48,6 +48,7 @@ const invoiceSchema = mongoose.Schema(
     // Notes
     notes: { type: String, default: '' },
     termsConditions: { type: String, default: '' },
+    materialDeliveryStatus: { type: String, enum: ['Pending', 'Delivered'], default: 'Pending' },
   },
   { timestamps: true }
 );
