@@ -8,6 +8,7 @@ import productRoutes from "./routes/productRoutes.js";
 import purchaseRoutes from "./routes/purchaseRoutes.js";
 import invoiceRoutes from "./routes/invoiceRoutes.js";
 import customerRoutes from "./routes/customerRoutes.js";
+import supplierRoutes from "./routes/supplierRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 
 dotenv.config();
@@ -30,6 +31,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/purchases", purchaseRoutes);
 app.use("/api/invoices", invoiceRoutes);
 app.use("/api/customers", customerRoutes);
+app.use("/api/suppliers", supplierRoutes);
 app.use("/api/reports", reportRoutes);
 
 // Basic route

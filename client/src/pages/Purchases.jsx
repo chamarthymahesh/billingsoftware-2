@@ -29,7 +29,7 @@ const Purchases = () => {
       try {
         const [compRes, suppRes, prodRes] = await Promise.all([
           axios.get(`${API}/api/companies`, { headers: authHeader }),
-          axios.get(`${API}/api/purchases/suppliers`, { headers: authHeader }),
+          axios.get(`${API}/api/suppliers`, { headers: authHeader }),
           axios.get(`${API}/api/products`, { headers: authHeader })
         ]);
         
@@ -66,7 +66,7 @@ const Purchases = () => {
   const handlePurchaseAdded = (newPurchase) => {
     setPurchases(prev => [newPurchase, ...prev]);
     setTimeout(() => {
-      axios.get(`${API}/api/purchases/suppliers`, { headers: authHeader }).then(r => setSuppliers(r.data));
+      axios.get(`${API}/api/suppliers`, { headers: authHeader }).then(r => setSuppliers(r.data));
       axios.get(`${API}/api/products`, { headers: authHeader }).then(r => setProducts(r.data));
     }, 1000);
   };
@@ -188,7 +188,7 @@ const Purchases = () => {
             onChange={(e) => setSearch(e.target.value)} 
           />
         </div>
-        <select className="pur-company-select" value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)}>
+        <select className="pur-company-select" value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)} disabled={userInfo.role !== 'Super Admin'}>
           {companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
       </div>

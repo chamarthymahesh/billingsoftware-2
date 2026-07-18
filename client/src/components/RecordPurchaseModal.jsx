@@ -36,21 +36,33 @@ const calcTotal = (item) => {
   return Number((base + base * (gst / 100)).toFixed(2));
 };
 
-const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, onPurchaseAdded, editingPurchase, onPurchaseUpdated }) => {
+const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, onPurchaseAdded, editingPurchase, onPurchaseUpdated, prepopulatedData }) => {
   const isEditMode = Boolean(editingPurchase);
   const [form, setForm] = useState({
-    targetCompany: editingPurchase?.targetCompany?._id || editingPurchase?.targetCompany || (companies.length > 0 ? companies[0]._id : ''),
-    supplierName: editingPurchase?.supplierName || '',
-    supplierGSTIN: editingPurchase?.supplierGSTIN || '',
-    billNumber: editingPurchase?.billNumber || '',
-    purchaseDate: editingPurchase?.purchaseDate ? new Date(editingPurchase.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-    paymentStatus: editingPurchase?.paymentStatus || 'Pending',
-    packagingCharges: editingPurchase?.packagingCharges || 0,
-    transportCharges: editingPurchase?.transportCharges || 0,
-    otherMiscCharges: editingPurchase?.otherMiscCharges || 0,
+    targetCompany: prepopulatedData?.targetCompany || editingPurchase?.targetCompany?._id || editingPurchase?.targetCompany || (companies.length > 0 ? companies[0]._id : ''),
+    supplierName: prepopulatedData?.supplierName || editingPurchase?.supplierName || '',
+    supplierGSTIN: prepopulatedData?.supplierGSTIN || editingPurchase?.supplierGSTIN || '',
+    billNumber: prepopulatedData?.billNumber || editingPurchase?.billNumber || '',
+    purchaseDate: prepopulatedData?.purchaseDate || (editingPurchase?.purchaseDate ? new Date(editingPurchase.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+    paymentStatus: prepopulatedData?.paymentStatus || editingPurchase?.paymentStatus || 'Pending',
+    packagingCharges: prepopulatedData?.packagingCharges || editingPurchase?.packagingCharges || 0,
+    transportCharges: prepopulatedData?.transportCharges || editingPurchase?.transportCharges || 0,
+    otherMiscCharges: prepopulatedData?.otherMiscCharges || editingPurchase?.otherMiscCharges || 0,
   });
 
   const [items, setItems] = useState(() => {
+    if (prepopulatedData?.items?.length > 0) {
+      return prepopulatedData.items.map(i => ({
+        id: i.id || (Date.now() + Math.random()),
+        productName: i.productName || '',
+        productId: i.productId || '',
+        qty: i.qty || 1,
+        rate: i.rate || 0,
+        gstRate: i.gstRate || 18,
+        isInclusive: i.isInclusive || false,
+        total: i.total || calcTotal(i),
+      }));
+    }
     if (editingPurchase?.items?.length > 0) {
       return editingPurchase.items.map(i => ({
         id: Date.now() + Math.random(),
@@ -69,6 +81,49 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
   const tableBottomRef = useRef(null);
 
   useEffect(() => {
+    if (isOpen) {
+      setForm({
+        targetCompany: prepopulatedData?.targetCompany || editingPurchase?.targetCompany?._id || editingPurchase?.targetCompany || (companies.length > 0 ? companies[0]._id : ''),
+        supplierName: prepopulatedData?.supplierName || editingPurchase?.supplierName || '',
+        supplierGSTIN: prepopulatedData?.supplierGSTIN || editingPurchase?.supplierGSTIN || '',
+        billNumber: prepopulatedData?.billNumber || editingPurchase?.billNumber || '',
+        purchaseDate: prepopulatedData?.purchaseDate || (editingPurchase?.purchaseDate ? new Date(editingPurchase.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+        paymentStatus: prepopulatedData?.paymentStatus || editingPurchase?.paymentStatus || 'Pending',
+        packagingCharges: prepopulatedData?.packagingCharges || editingPurchase?.packagingCharges || 0,
+        transportCharges: prepopulatedData?.transportCharges || editingPurchase?.transportCharges || 0,
+        otherMiscCharges: prepopulatedData?.otherMiscCharges || editingPurchase?.otherMiscCharges || 0,
+      });
+
+      if (prepopulatedData?.items?.length > 0) {
+        setItems(prepopulatedData.items.map(i => ({
+          id: i.id || (Date.now() + Math.random()),
+          productName: i.productName || '',
+          productId: i.productId || '',
+          qty: i.qty || 1,
+          rate: i.rate || 0,
+          gstRate: i.gstRate || 18,
+          isInclusive: i.isInclusive || false,
+          total: i.total || calcTotal(i),
+        })));
+      } else if (editingPurchase?.items?.length > 0) {
+        setItems(editingPurchase.items.map(i => ({
+          id: Date.now() + Math.random(),
+          productName: i.product?.name || i.productName || '',
+          productId: i.product?._id || i.product || '',
+          qty: i.qty,
+          rate: i.rate,
+          gstRate: i.gstRate || 18,
+          isInclusive: i.isInclusive || false,
+          total: i.total || calcTotal(i),
+        })));
+      } else {
+        setItems([]);
+      }
+      setShowGlobal(false);
+    }
+  }, [editingPurchase, prepopulatedData, isOpen]);
+
+  useEffect(() => {
     if (companies.length > 0 && !form.targetCompany) {
       setForm(f => ({ ...f, targetCompany: companies[0]._id }));
     }
@@ -77,7 +132,48 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
   const authHeader = { Authorization: `Bearer ${userInfo?.token}` };
 
-  const supplierOptions = [...new Set(suppliers.map(toProperCase))].filter(Boolean);
+  const [showGlobal, setShowGlobal] = useState(false);
+  const [modalSuppliers, setModalSuppliers] = useState(suppliers);
+  const [modalCompanies, setModalCompanies] = useState(companies);
+
+  useEffect(() => {
+    const fetchSuppliersAndCompanies = async () => {
+      try {
+        const companiesUrl = showGlobal ? `${API}/api/companies?global=true` : `${API}/api/companies`;
+        const suppliersUrl = (showGlobal || !form.targetCompany)
+          ? `${API}/api/suppliers`
+          : `${API}/api/suppliers?companyId=${form.targetCompany}`;
+
+        const [compRes, suppRes] = await Promise.all([
+          axios.get(companiesUrl, { headers: authHeader }),
+          axios.get(suppliersUrl, { headers: authHeader })
+        ]);
+
+        setModalCompanies(compRes.data);
+        setModalSuppliers(suppRes.data);
+      } catch (err) {
+        console.error('Error fetching modal suppliers/companies:', err);
+      }
+    };
+    if (isOpen) {
+      fetchSuppliersAndCompanies();
+    }
+  }, [showGlobal, form.targetCompany, isOpen]);
+
+  const combinedSuppliers = [
+    ...modalSuppliers.map(s => ({
+      name: s.name || s,
+      gstin: s.gstin || '',
+      isCompany: false
+    })),
+    ...modalCompanies.map(c => ({
+      name: c.name,
+      gstin: c.gstin || '',
+      isCompany: true
+    }))
+  ];
+
+  const supplierOptions = [...new Set(combinedSuppliers.map(s => toProperCase(s.name)))].filter(Boolean);
   const productOptions = [...new Set(products.map(p => toProperCase(p.name)))].filter(Boolean);
 
   const handleInput = (e) => {
@@ -86,7 +182,16 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
   };
 
   const handleSupplierChange = (val) => {
-    setForm(f => ({ ...f, supplierName: toProperCase(val) }));
+    const supp = combinedSuppliers.find(s => s.name.toLowerCase() === val.toLowerCase());
+    if (supp) {
+      setForm(f => ({
+        ...f,
+        supplierName: supp.name,
+        supplierGSTIN: supp.gstin || '',
+      }));
+    } else {
+      setForm(f => ({ ...f, supplierName: toProperCase(val) }));
+    }
   };
 
   const addItem = () => {
@@ -156,6 +261,20 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
         grandTotal: Number(grandTotal.toFixed(2)),
       };
 
+      // 1. Create Supplier if doesn't exist
+      const isCompany = modalCompanies.some(c => c.name.toLowerCase() === form.supplierName.toLowerCase());
+      const existingSupp = modalSuppliers.find(s => (s.name || s).toLowerCase() === form.supplierName.toLowerCase());
+      if (!existingSupp && !isCompany && form.supplierName.trim()) {
+        try {
+          await axios.post(`${API}/api/suppliers`, {
+            name: form.supplierName,
+            gstin: form.supplierGSTIN,
+          }, { headers: authHeader });
+        } catch (err) {
+          console.error('Error auto-creating supplier:', err);
+        }
+      }
+
       if (isEditMode) {
         const { data } = await axios.put(`${API}/api/purchases/${editingPurchase._id}`, payload, {
           headers: { ...authHeader, 'Content-Type': 'application/json' },
@@ -193,11 +312,17 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
               <label>TARGET COMPANY *</label>
               <select name="targetCompany" value={form.targetCompany} onChange={handleInput} required>
                 <option value="">-- Choose --</option>
-                {companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                {modalCompanies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
             </div>
-            <div className="rpm-field">
-              <label>SUPPLIER NAME *</label>
+             <div className="rpm-field">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: 'bold' }}>SUPPLIER NAME *</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#94a3b8', cursor: 'pointer', userSelect: 'none', fontWeight: 'normal' }}>
+                  <input type="checkbox" checked={showGlobal} onChange={e => setShowGlobal(e.target.checked)} style={{ width: 'auto', margin: 0 }} />
+                  Show Global
+                </label>
+              </div>
               <CreatableSelect
                 value={form.supplierName}
                 onChange={handleSupplierChange}

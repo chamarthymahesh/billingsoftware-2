@@ -44,7 +44,10 @@ const GSTR1Report = () => {
 
   const downloadCSV = (section) => {
     if (!report) return;
-    const rows = section === 'b2b' ? report.b2b : section === 'b2c' ? report.b2c : report.hsnSummary;
+    const rows = section === 'b2b' ? report.b2b 
+               : section === 'b2c' ? report.b2c 
+               : section === 'hsnB2b' ? report.hsnB2B 
+               : report.hsnB2C;
     let csv = '';
     if (section === 'b2b' || section === 'b2c') {
       csv = 'Invoice No,Date,Customer,GSTIN,Place of Supply,Tax Type,Taxable Value,CGST,SGST,IGST,Total Tax,Grand Total\n';
@@ -120,7 +123,7 @@ const GSTR1Report = () => {
       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '24px', background: 'rgba(30,41,59,0.7)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <label style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600 }}>COMPANY</label>
-          <select value={selectedCompany} onChange={e => setSelectedCompany(e.target.value)} className="sl-company-select">
+          <select value={selectedCompany} onChange={e => setSelectedCompany(e.target.value)} className="sl-company-select" disabled={userInfo.role !== 'Super Admin'}>
             {companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
           </select>
         </div>
@@ -174,7 +177,8 @@ const GSTR1Report = () => {
           <div style={{ display: 'flex', gap: '4px', marginBottom: '0' }}>
             <button style={tabStyle('b2b')} onClick={() => setActiveTab('b2b')}>B2B ({report.b2b.length})</button>
             <button style={tabStyle('b2c')} onClick={() => setActiveTab('b2c')}>B2C ({report.b2c.length})</button>
-            <button style={tabStyle('hsn')} onClick={() => setActiveTab('hsn')}>HSN Summary</button>
+            <button style={tabStyle('hsnB2b')} onClick={() => setActiveTab('hsnB2b')}>HSN B2B ({report.hsnB2B?.length || 0})</button>
+            <button style={tabStyle('hsnB2c')} onClick={() => setActiveTab('hsnB2c')}>HSN B2C ({report.hsnB2C?.length || 0})</button>
           </div>
 
           <div className="sl-table-wrap" style={{ borderRadius: '0 8px 8px 8px' }}>
@@ -225,7 +229,7 @@ const GSTR1Report = () => {
             )}
 
             {/* HSN Summary Table */}
-            {activeTab === 'hsn' && (
+            {(activeTab === 'hsnB2b' || activeTab === 'hsnB2c') && (
               <table className="sl-table">
                 <thead>
                   <tr>
@@ -241,9 +245,9 @@ const GSTR1Report = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {report.hsnSummary.length === 0 ? (
+                  {((activeTab === 'hsnB2b' ? report.hsnB2B : report.hsnB2C) || []).length === 0 ? (
                     <tr><td colSpan={9} className="sl-center">No HSN data found</td></tr>
-                  ) : report.hsnSummary.map((h, i) => (
+                  ) : (activeTab === 'hsnB2b' ? report.hsnB2B : report.hsnB2C).map((h, i) => (
                     <tr key={i}>
                       <td><span className="sl-code">{h.hsn}</span></td>
                       <td>{h.gstRate}%</td>

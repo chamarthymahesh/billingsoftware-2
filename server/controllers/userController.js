@@ -1,10 +1,10 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
 // Generate JWT
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
+const generateToken = (id, companyId, role) => {
+  return jwt.sign({ id, companyId, role }, process.env.JWT_SECRET, {
+    expiresIn: "30d",
   });
 };
 
@@ -15,7 +15,6 @@ const authUser = async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email });
-
   if (user && (await user.matchPassword(password))) {
     res.json({
       _id: user._id,
@@ -24,10 +23,10 @@ const authUser = async (req, res) => {
       role: user.role,
       permissions: user.permissions,
       companyId: user.companyId,
-      token: generateToken(user._id),
+      token: generateToken(user._id, user.companyId, user.role),
     });
   } else {
-    res.status(401).json({ message: 'Invalid email or password' });
+    res.status(401).json({ message: "Invalid email or password" });
   }
 };
 
@@ -40,7 +39,7 @@ const registerUser = async (req, res) => {
   const userExists = await User.findOne({ email });
 
   if (userExists) {
-    res.status(400).json({ message: 'User already exists' });
+    res.status(400).json({ message: "User already exists" });
     return;
   }
 
@@ -60,10 +59,10 @@ const registerUser = async (req, res) => {
       role: user.role,
       permissions: user.permissions,
       companyId: user.companyId,
-      token: generateToken(user._id),
+      token: generateToken(user._id, user.companyId, user.role),
     });
   } else {
-    res.status(400).json({ message: 'Invalid user data' });
+    res.status(400).json({ message: "Invalid user data" });
   }
 };
 
@@ -83,7 +82,7 @@ const getUserProfile = async (req, res) => {
       companyId: user.companyId,
     });
   } else {
-    res.status(404).json({ message: 'User not found' });
+    res.status(404).json({ message: "User not found" });
   }
 };
 
@@ -97,9 +96,9 @@ const resetPassword = async (req, res) => {
     if (user) {
       user.password = newPassword; // The pre-save hook will hash this
       await user.save();
-      res.json({ message: 'Password reset successfully' });
+      res.json({ message: "Password reset successfully" });
     } else {
-      res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: "User not found" });
     }
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -113,7 +112,7 @@ const resetPassword = async (req, res) => {
 // @access  Private
 const getSubUsers = async (req, res) => {
   try {
-    const users = await User.find({ createdBy: req.user._id }).select('-password');
+    const users = await User.find({ createdBy: req.user._id }).select("-password");
     res.json(users);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -126,17 +125,17 @@ const getSubUsers = async (req, res) => {
 const createSubUser = async (req, res) => {
   try {
     const { name, email, password, role, permissions } = req.body;
-    
+
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ message: "User already exists" });
     }
 
     const user = await User.create({
       name,
       email,
       password,
-      role: role || 'Staff',
+      role: role || "Staff",
       permissions: permissions || [],
       createdBy: req.user._id,
       companyId: req.user.companyId, // Inherit admin's company if applicable
@@ -160,7 +159,7 @@ const createSubUser = async (req, res) => {
 const updateSubUser = async (req, res) => {
   try {
     const user = await User.findOne({ _id: req.params.id, createdBy: req.user._id });
-    if (!user) return res.status(404).json({ message: 'Sub-user not found' });
+    if (!user) return res.status(404).json({ message: "Sub-user not found" });
 
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
@@ -189,11 +188,20 @@ const updateSubUser = async (req, res) => {
 const deleteSubUser = async (req, res) => {
   try {
     const user = await User.findOneAndDelete({ _id: req.params.id, createdBy: req.user._id });
-    if (!user) return res.status(404).json({ message: 'Sub-user not found' });
-    res.json({ message: 'User removed' });
+    if (!user) return res.status(404).json({ message: "Sub-user not found" });
+    res.json({ message: "User removed" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-export { authUser, registerUser, getUserProfile, resetPassword, getSubUsers, createSubUser, updateSubUser, deleteSubUser };
+export {
+  authUser,
+  registerUser,
+  getUserProfile,
+  resetPassword,
+  getSubUsers,
+  createSubUser,
+  updateSubUser,
+  deleteSubUser,
+};

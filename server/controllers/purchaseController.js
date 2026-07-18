@@ -7,6 +7,9 @@ import mongoose from 'mongoose';
 // @access  Private
 export const createPurchase = async (req, res) => {
   try {
+    if (req.user.companyId) {
+      req.body.targetCompany = req.user.companyId;
+    }
     const {
       targetCompany,
       supplierName,
@@ -62,10 +65,8 @@ export const createPurchase = async (req, res) => {
 // @access  Private
 export const getPurchases = async (req, res) => {
   try {
-    const filter = {};
-    if (req.query.companyId) {
-       filter.targetCompany = req.query.companyId;
-    }
+    const targetCompany = req.user.companyId || req.query.companyId;
+    const filter = targetCompany ? { targetCompany } : {};
 
     const purchases = await Purchase.find(filter)
       .populate('targetCompany', 'name')
@@ -83,7 +84,8 @@ export const getPurchases = async (req, res) => {
 // @access  Private
 export const getSuppliers = async (req, res) => {
   try {
-    const suppliers = await Purchase.distinct('supplierName');
+    const filter = req.user.companyId ? { targetCompany: req.user.companyId } : {};
+    const suppliers = await Purchase.distinct('supplierName', filter);
     res.json(suppliers);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -97,6 +99,9 @@ export const updatePurchase = async (req, res) => {
   try {
     const purchase = await Purchase.findById(req.params.id);
     if (!purchase) return res.status(404).json({ message: 'Purchase not found' });
+    if (req.user.companyId && purchase.targetCompany.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
 
     const {
       supplierName, supplierGSTIN, billNumber, purchaseDate,
@@ -145,6 +150,9 @@ export const deletePurchase = async (req, res) => {
   try {
     const purchase = await Purchase.findById(req.params.id);
     if (!purchase) return res.status(404).json({ message: 'Purchase not found' });
+    if (req.user.companyId && purchase.targetCompany.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
 
     // Reverse stock increments
     for (const item of purchase.items) {
@@ -165,9 +173,17 @@ export const updatePurchaseStatus = async (req, res) => {
   try {
     const { status } = req.body;
     if (!status) return res.status(400).json({ message: 'Status required' });
-    const purchase = await Purchase.findByIdAndUpdate(req.params.id, { paymentStatus: status }, { new: true }).populate('targetCompany', 'name');
+    const purchase = await Purchase.findById(req.params.id);
     if (!purchase) return res.status(404).json({ message: 'Purchase not found' });
-    res.json(purchase);
+    if (req.user.companyId && purchase.targetCompany.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+    
+    purchase.paymentStatus = status;
+    await purchase.save();
+    
+    const populatedPurchase = await Purchase.findById(purchase._id).populate('targetCompany', 'name');
+    res.json(populatedPurchase);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -187,13 +203,16 @@ export const transferStock = async (req, res) => {
     const sourceProduct = await Product.findById(sourceProductId).populate('companyId');
     if (!sourceProduct) return res.status(404).json({ message: 'Source product not found' });
 
+    if (req.user.companyId && sourceProduct.companyId._id.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ message: 'Not authorized to transfer stock from this product' });
+    }
+
     if (sourceProduct.stock < transferQty) {
       return res.status(400).json({ message: 'Insufficient stock in source company' });
     }
 
-    // Find or create the product in the target company
+    // Find the product globally
     let targetProduct = await Product.findOne({
-      companyId: targetCompanyId,
       name: new RegExp(`^${sourceProduct.name}$`, 'i')
     }).collation({ locale: 'en', strength: 2 });
 

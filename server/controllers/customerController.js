@@ -1,4 +1,5 @@
 import Customer from '../models/Customer.js';
+import { getStateWithCode } from '../utils/stateHelper.js';
 
 // Helper to title case names
 const toProperCase = (str) => {
@@ -14,7 +15,14 @@ const toProperCase = (str) => {
 // @route  GET /api/customers
 export const getCustomers = async (req, res) => {
   try {
-    const customers = await Customer.find({}).sort({ name: 1 });
+    const { companyId } = req.query;
+    let filter = {};
+    if (companyId) {
+      const Invoice = (await import('../models/Invoice.js')).default;
+      const usedNames = await Invoice.distinct('customerName', { company: companyId });
+      filter = { name: { $in: usedNames.map(name => new RegExp(`^${name.trim()}$`, 'i')) } };
+    }
+    const customers = await Customer.find(filter).sort({ name: 1 });
     res.json(customers);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -42,7 +50,7 @@ export const createCustomer = async (req, res) => {
       name,
       phone: phone || '',
       gstin: gstin || '',
-      state: state || '',
+      state: getStateWithCode(state || '', gstin),
       billingAddress: billingAddress || '',
       shippingAddress: shippingAddress || ''
     });

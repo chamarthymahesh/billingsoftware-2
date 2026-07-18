@@ -25,6 +25,9 @@ const GlobalStock = () => {
         ]);
         setCompanies(compRes.data);
         setProducts(prodRes.data);
+        if (userInfo.role !== 'Super Admin' && compRes.data.length > 0) {
+          setSelectedCompany(compRes.data[0]._id);
+        }
       } catch (err) {
         console.error('Error fetching data:', err);
       } finally {
@@ -100,8 +103,9 @@ const GlobalStock = () => {
           value={selectedCompany} 
           onChange={e => setSelectedCompany(e.target.value)}
           style={{ width: '250px' }}
+          disabled={userInfo.role !== 'Super Admin'}
         >
-          <option value="">All Companies</option>
+          {userInfo.role === 'Super Admin' && <option value="">All Companies</option>}
           {companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
       </div>

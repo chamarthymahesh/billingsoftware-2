@@ -56,14 +56,14 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, []);  const isSuperAdmin = userInfo?.role === 'Super Admin';
 
   return (
     <div className="sl-page">
       <div className="sl-header">
         <div>
           <h1 className="sl-title">Dashboard</h1>
-          <p className="sl-subtitle">Overview across all your registered companies</p>
+          <p className="sl-subtitle">{isSuperAdmin ? 'Overview across all your registered companies' : 'Overview of your company'}</p>
         </div>
       </div>
 
@@ -72,22 +72,24 @@ const Dashboard = () => {
       ) : (
         <>
           <div className="sl-stats" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-            <div className="sl-stat">
-              <div className="sl-stat-icon" style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6' }}>
-                <Building2 size={24} />
+            {isSuperAdmin && (
+              <div className="sl-stat">
+                <div className="sl-stat-icon" style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6' }}>
+                  <Building2 size={24} />
+                </div>
+                <div>
+                  <p>REGISTERED COMPANIES</p>
+                  <h3>{totalCompanies}</h3>
+                </div>
               </div>
-              <div>
-                <p>REGISTERED COMPANIES</p>
-                <h3>{totalCompanies}</h3>
-              </div>
-            </div>
+            )}
 
             <div className="sl-stat">
               <div className="sl-stat-icon" style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981' }}>
                 <TrendingUp size={24} />
               </div>
               <div>
-                <p>TOTAL PROFIT (ALL COMPANIES)</p>
+                <p>{isSuperAdmin ? 'TOTAL PROFIT (ALL COMPANIES)' : 'TOTAL PROFIT'}</p>
                 <h3 style={{ color: '#10b981' }}>₹{totalProfit.toFixed(2)}</h3>
               </div>
             </div>
@@ -97,7 +99,7 @@ const Dashboard = () => {
                 <DollarSign size={24} />
               </div>
               <div>
-                <p>TOTAL REVENUE (SALES)</p>
+                <p>{isSuperAdmin ? 'TOTAL REVENUE (SALES)' : 'TOTAL REVENUE'}</p>
                 <h3>₹{totalSales.toFixed(2)}</h3>
               </div>
             </div>
@@ -107,7 +109,7 @@ const Dashboard = () => {
                 <ShoppingCart size={24} />
               </div>
               <div>
-                <p>TOTAL PURCHASES</p>
+                <p>{isSuperAdmin ? 'TOTAL PURCHASES (ALL COMPANIES)' : 'TOTAL PURCHASES'}</p>
                 <h3>₹{totalPurchases.toFixed(2)}</h3>
               </div>
             </div>
@@ -117,7 +119,7 @@ const Dashboard = () => {
                 <Truck size={24} />
               </div>
               <div>
-                <p>TOTAL TRANSPORT CHARGES</p>
+                <p>{isSuperAdmin ? 'TOTAL TRANSPORT CHARGES (ALL COMPANIES)' : 'TOTAL TRANSPORT CHARGES'}</p>
                 <h3>₹{totalTransport.toFixed(2)}</h3>
               </div>
             </div>
@@ -127,7 +129,7 @@ const Dashboard = () => {
                 <Percent size={24} />
               </div>
               <div>
-                <p>TOTAL COMMISSION</p>
+                <p>{isSuperAdmin ? 'TOTAL COMMISSION (ALL COMPANIES)' : 'TOTAL COMMISSION'}</p>
                 <h3>₹{totalCommission.toFixed(2)}</h3>
               </div>
             </div>

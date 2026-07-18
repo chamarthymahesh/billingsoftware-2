@@ -6,8 +6,15 @@ import asyncHandler from 'express-async-handler';
 // Get Invoice-wise Profit Report
 // Route: GET /api/reports/invoice-profit
 export const getInvoiceProfitReport = asyncHandler(async (req, res) => {
+  const company = req.user.companyId || req.query.companyId;
+  const matchStage = {};
+  if (company) {
+    matchStage.company = new mongoose.Types.ObjectId(company);
+  }
+
   // Aggregate invoices with their items and product purchase price
   const report = await Invoice.aggregate([
+    { $match: matchStage },
     // Match invoices for the company (assuming req.user.companyId is available, else we can skip if not needed for now, but better to match by company if it exists in the system)
     {
       $lookup: {
@@ -139,7 +146,8 @@ export const getInvoiceProfitReport = asyncHandler(async (req, res) => {
 // State code = first 2 digits of GSTIN
 // ----------------------------------------------------------------
 export const getGSTR1Report = asyncHandler(async (req, res) => {
-  const { companyId, month, year } = req.query;
+  const companyId = req.user.companyId || req.query.companyId;
+  const { month, year } = req.query;
   if (!companyId) {
     res.status(400);
     throw new Error('companyId is required');
@@ -235,8 +243,9 @@ export const getGSTR1Report = asyncHandler(async (req, res) => {
     }
   });
 
-  // Aggregate HSN Summary across ALL invoices
-  const hsnSummary = {};
+  // Aggregate HSN Summary for B2B and B2C across ALL invoices
+  const hsnB2B = {};
+  const hsnB2C = {};
   invoices.forEach(inv => {
     const customerGSTIN  = inv.customerGSTIN?.trim() || '';
     const buyerStateCode = customerGSTIN.length >= 2 ? customerGSTIN.substring(0, 2) : '';
@@ -244,11 +253,14 @@ export const getGSTR1Report = asyncHandler(async (req, res) => {
                            ? sellerStateCode !== buyerStateCode
                            : false;
 
+    const isB2B = customerGSTIN.length > 0;
+    const targetHsnMap = isB2B ? hsnB2B : hsnB2C;
+
     inv.items.forEach(item => {
       const hsn    = item.hsnCode || 'NA';
       const taxAmt = Number(item.taxAmount) || 0;
-      if (!hsnSummary[hsn]) {
-        hsnSummary[hsn] = {
+      if (!targetHsnMap[hsn]) {
+        targetHsnMap[hsn] = {
           hsn,
           gstRate: item.gstRate || 0,
           qty: 0,
@@ -258,13 +270,13 @@ export const getGSTR1Report = asyncHandler(async (req, res) => {
           totalAmount: 0,
         };
       }
-      hsnSummary[hsn].qty          += Number(item.qty) || 0;
-      hsnSummary[hsn].taxableAmount += Number(item.taxableAmount) || 0;
-      hsnSummary[hsn].cgst          += isInterState ? 0 : taxAmt / 2;
-      hsnSummary[hsn].sgst          += isInterState ? 0 : taxAmt / 2;
-      hsnSummary[hsn].igst          += isInterState ? taxAmt : 0;
-      hsnSummary[hsn].taxAmount     += taxAmt;
-      hsnSummary[hsn].totalAmount   += Number(item.total) || 0;
+      targetHsnMap[hsn].qty          += Number(item.qty) || 0;
+      targetHsnMap[hsn].taxableAmount += Number(item.taxableAmount) || 0;
+      targetHsnMap[hsn].cgst          += isInterState ? 0 : taxAmt / 2;
+      targetHsnMap[hsn].sgst          += isInterState ? 0 : taxAmt / 2;
+      targetHsnMap[hsn].igst          += isInterState ? taxAmt : 0;
+      targetHsnMap[hsn].taxAmount     += taxAmt;
+      targetHsnMap[hsn].totalAmount   += Number(item.total) || 0;
     });
   });
 
@@ -286,7 +298,8 @@ export const getGSTR1Report = asyncHandler(async (req, res) => {
     sellerStateCode,
     b2b,
     b2c,
-    hsnSummary     : Object.values(hsnSummary),
+    hsnB2B         : Object.values(hsnB2B),
+    hsnB2C         : Object.values(hsnB2C),
     totals         : {
       totalInvoices  : invoices.length,
       totalTaxable   : invoices.reduce((s, i) => s + (i.subtotal || 0), 0),

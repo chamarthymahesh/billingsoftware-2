@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Save, AlertTriangle, Check } from 'lucide-react';
+import { Search, Save, AlertTriangle, Check, RefreshCw } from 'lucide-react';
+import RecordPurchaseModal from '../components/RecordPurchaseModal';
 import './Products.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -8,6 +9,7 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const StockAdjustment = () => {
   const [products, setProducts] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState('');
   const [search, setSearch] = useState('');
   const [showNegativeOnly, setShowNegativeOnly] = useState(false);
@@ -18,18 +20,27 @@ const StockAdjustment = () => {
   const [updatingId, setUpdatingId] = useState(null);
   const [successId, setSuccessId] = useState(null);
 
+  // Stock settlement states
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [settleData, setSettleData] = useState(null);
+
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
   const authHeader = { Authorization: `Bearer ${userInfo?.token}` };
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [compRes, prodRes] = await Promise.all([
+      const [compRes, prodRes, suppRes] = await Promise.all([
         axios.get(`${API}/api/companies`, { headers: authHeader }),
-        axios.get(`${API}/api/products`, { headers: authHeader })
+        axios.get(`${API}/api/products`, { headers: authHeader }),
+        axios.get(`${API}/api/suppliers`, { headers: authHeader })
       ]);
       setCompanies(compRes.data);
       setProducts(prodRes.data);
+      setSuppliers(suppRes.data);
+      if (userInfo.role !== 'Super Admin' && compRes.data.length > 0) {
+        setSelectedCompany(compRes.data[0]._id);
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
@@ -75,9 +86,35 @@ const StockAdjustment = () => {
     } catch (err) {
       console.error('Error updating stock', err);
       alert('Failed to update stock');
-    } finally {
-      setUpdatingId(null);
     }
+  };
+
+  const handleSettle = (product) => {
+    // Settle negative stock by creating a purchase invoice with the same absolute quantity
+    const qty = Math.abs(product.stock) || 1;
+    const rate = product.purchasePrice || 0;
+    const gstRate = product.gstRate || 18;
+    const total = qty * rate * (1 + gstRate / 100);
+
+    const prepopulated = {
+      targetCompany: product.companyId?._id || product.companyId || '',
+      items: [{
+        id: Date.now() + Math.random(),
+        productName: product.name,
+        productId: product._id,
+        qty: qty,
+        rate: rate,
+        gstRate: gstRate,
+        isInclusive: false,
+        total: Number(total.toFixed(2))
+      }],
+      supplierName: '',
+      supplierGSTIN: '',
+      paymentStatus: 'Paid' // Settle stock purchases are usually paid
+    };
+
+    setSettleData(prepopulated);
+    setIsPurchaseModalOpen(true);
   };
 
   const filteredProducts = products.filter(p => {
@@ -115,8 +152,9 @@ const StockAdjustment = () => {
           className="sl-company-select" 
           value={selectedCompany} 
           onChange={e => setSelectedCompany(e.target.value)}
+          disabled={userInfo.role !== 'Super Admin'}
         >
-          <option value="">All Companies</option>
+          {userInfo.role === 'Super Admin' && <option value="">All Companies</option>}
           {companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
 
@@ -208,26 +246,47 @@ const StockAdjustment = () => {
                           <Check size={18} /> Updated
                         </span>
                       ) : (
-                        <button 
-                          onClick={() => handleUpdateStock(p)}
-                          disabled={!hasEdits || updatingId === p._id}
-                          style={{
-                            background: hasEdits ? '#3b82f6' : 'rgba(255,255,255,0.1)',
-                            color: hasEdits ? '#fff' : '#94a3b8',
-                            border: 'none',
-                            padding: '6px 16px',
-                            borderRadius: '6px',
-                            cursor: hasEdits ? 'pointer' : 'not-allowed',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            fontWeight: 600,
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          <Save size={14} />
-                          {updatingId === p._id ? 'Saving...' : 'Update'}
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button 
+                            onClick={() => handleUpdateStock(p)}
+                            disabled={!hasEdits || updatingId === p._id}
+                            style={{
+                              background: hasEdits ? '#3b82f6' : 'rgba(255,255,255,0.1)',
+                              color: hasEdits ? '#fff' : '#94a3b8',
+                              border: 'none',
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              cursor: hasEdits ? 'pointer' : 'not-allowed',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontWeight: 600,
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <Save size={14} />
+                            {updatingId === p._id ? 'Saving...' : 'Update'}
+                          </button>
+                          
+                          <button 
+                            onClick={() => handleSettle(p)}
+                            style={{
+                              background: 'rgba(16, 185, 129, 0.15)',
+                              color: '#10b981',
+                              border: '1px solid rgba(16, 185, 129, 0.3)',
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontWeight: 600,
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            Settle Stock
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -237,6 +296,24 @@ const StockAdjustment = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Settle Purchase Modal */}
+      {isPurchaseModalOpen && (
+        <RecordPurchaseModal
+          isOpen={isPurchaseModalOpen}
+          onClose={() => {
+            setIsPurchaseModalOpen(false);
+            setSettleData(null);
+          }}
+          companies={companies}
+          suppliers={suppliers}
+          products={products}
+          onPurchaseAdded={() => {
+            fetchData(); // Reload all stocks
+          }}
+          prepopulatedData={settleData}
+        />
+      )}
     </div>
   );
 };

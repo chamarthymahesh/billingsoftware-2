@@ -7,7 +7,7 @@ const productSchema = mongoose.Schema(
       ref: 'Company',
       required: true,
     },
-    name: { type: String, required: true },
+    name: { type: String, required: true, unique: true },
     brand: { type: String, default: '' },
     productType: { type: String, enum: ['Physical Good', 'Service'], default: 'Physical Good' },
     category: { type: String, default: '' },
@@ -27,7 +27,7 @@ const productSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-productSchema.index({ companyId: 1, name: 1 });
+
 
 const Product = mongoose.model('Product', productSchema);
 export default Product;

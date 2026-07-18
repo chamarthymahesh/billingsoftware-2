@@ -9,11 +9,42 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
 const INDIAN_STATES = [
-  'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat',
-  'Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh',
-  'Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab',
-  'Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh',
-  'Uttarakhand','West Bengal','Delhi','Jammu & Kashmir','Ladakh',
+  '01 - Jammu & Kashmir',
+  '02 - Himachal Pradesh',
+  '03 - Punjab',
+  '04 - Chandigarh',
+  '05 - Uttarakhand',
+  '06 - Haryana',
+  '07 - Delhi',
+  '08 - Rajasthan',
+  '09 - Uttar Pradesh',
+  '10 - Bihar',
+  '11 - Sikkim',
+  '12 - Arunachal Pradesh',
+  '13 - Nagaland',
+  '14 - Manipur',
+  '15 - Mizoram',
+  '16 - Tripura',
+  '17 - Meghalaya',
+  '18 - Assam',
+  '19 - West Bengal',
+  '20 - Jharkhand',
+  '21 - Odisha',
+  '22 - Chhattisgarh',
+  '23 - Madhya Pradesh',
+  '24 - Gujarat',
+  '26 - Dadra & Nagar Haveli and Daman & Diu',
+  '27 - Maharashtra',
+  '29 - Karnataka',
+  '30 - Goa',
+  '31 - Lakshadweep',
+  '32 - Kerala',
+  '33 - Tamil Nadu',
+  '34 - Puducherry',
+  '35 - Andaman & Nicobar Islands',
+  '36 - Telangana',
+  '37 - Andhra Pradesh',
+  '38 - Ladakh'
 ];
 
 const toProper = (s) => {
@@ -68,6 +99,8 @@ const CreateInvoice = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const [showGlobalProducts, setShowGlobalProducts] = useState(false);
+
   const [form, setForm] = useState({
     company: userInfo?.companyId || '',
     invoiceNumber: '',
@@ -93,6 +126,42 @@ const CreateInvoice = () => {
   const [items, setItems] = useState([makeItem()]);
   const [sameAsShipping, setSameAsShipping] = useState(false);
 
+  const [showGlobal, setShowGlobal] = useState(false);
+
+  useEffect(() => {
+    const fetchCustomersAndCompanies = async () => {
+      try {
+        const companiesUrl = showGlobal ? `${API}/api/companies?global=true` : `${API}/api/companies`;
+        const customersUrl = (showGlobal || !form.company) 
+          ? `${API}/api/customers` 
+          : `${API}/api/customers?companyId=${form.company}`;
+
+        const [compRes, custRes] = await Promise.all([
+          axios.get(companiesUrl, { headers: authHeader }),
+          axios.get(customersUrl, { headers: authHeader })
+        ]);
+
+        setCompanies(compRes.data);
+        setCustomers(custRes.data);
+
+        // Set default company if none set
+        let initialCompanyId = form.company;
+        if (!initialCompanyId && compRes.data.length > 0) {
+           initialCompanyId = compRes.data[0]._id;
+           setForm(f => ({ ...f, company: initialCompanyId }));
+        }
+
+        if (initialCompanyId && !form.invoiceNumber) {
+          const numRes = await axios.get(`${API}/api/invoices/next-number?companyId=${initialCompanyId}`, { headers: authHeader });
+          setForm(f => ({ ...f, invoiceNumber: numRes.data.invoiceNumber }));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchCustomersAndCompanies();
+  }, [showGlobal, form.company]);
+
   const fetchProducts = async () => {
     try {
       const res = await axios.get(`${API}/api/products`, { headers: authHeader });
@@ -103,33 +172,7 @@ const CreateInvoice = () => {
   };
 
   useEffect(() => {
-    const init = async () => {
-      try {
-        const [compRes, prodRes, custRes] = await Promise.all([
-          axios.get(`${API}/api/companies`, { headers: authHeader }),
-          axios.get(`${API}/api/products`, { headers: authHeader }),
-          axios.get(`${API}/api/customers`, { headers: authHeader }),
-        ]);
-        setCompanies(compRes.data);
-        setProducts(prodRes.data);
-        setCustomers(custRes.data);
-
-        // Set default company
-        let initialCompanyId = form.company;
-        if (!initialCompanyId && compRes.data.length > 0) {
-           initialCompanyId = compRes.data[0]._id;
-           setForm(f => ({ ...f, company: initialCompanyId }));
-        }
-        
-        if (initialCompanyId) {
-          const numRes = await axios.get(`${API}/api/invoices/next-number?companyId=${initialCompanyId}`, { headers: authHeader });
-          setForm(f => ({ ...f, invoiceNumber: numRes.data.invoiceNumber }));
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    init();
+    fetchProducts();
   }, []);
 
   const handleCompanyChange = async (companyId) => {
@@ -145,8 +188,29 @@ const CreateInvoice = () => {
     setForm(f => ({ ...f, [name]: value }));
   };
 
+  const combinedCustomers = [
+    ...customers.map(c => ({
+      name: c.name,
+      phone: c.phone || '',
+      gstin: c.gstin || '',
+      state: c.state || '',
+      billingAddress: c.billingAddress || '',
+      shippingAddress: c.shippingAddress || '',
+      isCompany: false
+    })),
+    ...companies.map(c => ({
+      name: c.name,
+      phone: c.phone || '',
+      gstin: c.gstin || '',
+      state: c.state || '',
+      billingAddress: c.address || '',
+      shippingAddress: c.address || '',
+      isCompany: true
+    }))
+  ];
+
   const handleCustomerSelect = (val) => {
-    const cust = customers.find(c => c.name.toLowerCase() === val.toLowerCase());
+    const cust = combinedCustomers.find(c => c.name.toLowerCase() === val.toLowerCase());
     if (cust) {
       setForm(f => ({
         ...f,
@@ -186,6 +250,30 @@ const CreateInvoice = () => {
           updated.product = '';
           updated.productCompanyId = null;
         }
+      }
+
+      if (field === 'total') {
+        const newTotal = parseFloat(value) || 0;
+        const qty = parseFloat(item.qty) || 0;
+        const disc = parseFloat(item.discount) || 0;
+        const gst = parseFloat(item.gstRate) || 0;
+        
+        if (qty > 0) {
+          let rateAfterDisc;
+          if (item.isInclusive) {
+            rateAfterDisc = newTotal / qty;
+          } else {
+            rateAfterDisc = newTotal / (qty * (1 + gst / 100));
+          }
+          
+          let newRate = rateAfterDisc;
+          if (disc < 100) {
+            newRate = rateAfterDisc / (1 - disc / 100);
+          }
+          
+          updated.rate = Number(newRate.toFixed(2));
+        }
+        updated.total = newTotal;
       }
 
       return calcItem(updated);
@@ -272,8 +360,9 @@ const CreateInvoice = () => {
     setLoading(true);
     try {
       // 1. Create Customer if doesn't exist
+      const isCompany = companies.some(c => c.name.toLowerCase() === form.customerName.toLowerCase());
       const existingCust = customers.find(c => c.name.toLowerCase() === form.customerName.toLowerCase());
-      if (!existingCust) {
+      if (!existingCust && !isCompany && form.customerName.trim()) {
         await axios.post(`${API}/api/customers`, {
           name: form.customerName,
           phone: form.customerPhone,
@@ -324,8 +413,24 @@ const CreateInvoice = () => {
     }
   };
 
-  const productOptions = [...new Set(products.map(p => toProper(p.name)))].filter(Boolean);
-  const customerOptions = customers.map(c => toProper(c.name));
+  // Filter products based on showGlobalProducts toggle
+  const displayedProducts = showGlobalProducts
+    ? products
+    : products.filter(p => {
+        const prodCompId = p.companyId?._id || p.companyId;
+        return String(prodCompId) === String(form.company);
+      });
+
+  const productOptions = displayedProducts.map(p => {
+    const prodCompId = p.companyId?._id || p.companyId;
+    const isGlobal = String(prodCompId) !== String(form.company);
+    return {
+      value: p.name,
+      label: toProper(p.name),
+      isGlobal: isGlobal
+    };
+  });
+  const customerOptions = combinedCustomers.map(c => toProper(c.name));
 
   return (
     <div className="ci-page">
@@ -392,9 +497,14 @@ const CreateInvoice = () => {
             </div>
           </div>
 
-          {/* ── Section: Customer Details ── */}
           <div className="ci-section">
-            <div className="ci-section-title"><User size={16} /> Customer Details</div>
+            <div className="ci-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><User size={16} /> Customer Details</span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#94a3b8', cursor: 'pointer', userSelect: 'none' }}>
+                <input type="checkbox" checked={showGlobal} onChange={e => setShowGlobal(e.target.checked)} style={{ width: 'auto', margin: 0 }} />
+                Show Global Customers & Companies
+              </label>
+            </div>
             <div className="ci-grid-3">
               <div className="ci-field">
                 <label>CUSTOMER NAME *</label>
@@ -445,7 +555,13 @@ const CreateInvoice = () => {
 
           {/* ── Section: Line Items ── */}
           <div className="ci-section">
-            <div className="ci-section-title"><Package size={16} /> Line Items</div>
+            <div className="ci-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Package size={16} /> Line Items</span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#94a3b8', cursor: 'pointer', userSelect: 'none', fontWeight: 'normal' }}>
+                <input type="checkbox" checked={showGlobalProducts} onChange={e => setShowGlobalProducts(e.target.checked)} style={{ width: 'auto', margin: 0 }} />
+                Show Global Products
+              </label>
+            </div>
 
             <div className="ci-items-table-wrap">
               <table className="ci-items-table">
@@ -513,7 +629,8 @@ const CreateInvoice = () => {
                           onChange={e => handleItemChange(item.id, 'isInclusive', e.target.checked)} />
                       </td>
                       <td>
-                        <input className="ci-input ci-readonly" type="text" readOnly value={`₹${item.total.toFixed(2)}`} />
+                        <input className="ci-input" type="number" min="0" step="0.01" value={item.total}
+                          onChange={e => handleItemChange(item.id, 'total', e.target.value)} />
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '5px' }}>

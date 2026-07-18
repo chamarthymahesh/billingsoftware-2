@@ -148,7 +148,7 @@ const Sales = () => {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <select className="sl-company-select" value={selectedCompany} onChange={e => setSelectedCompany(e.target.value)}>
+        <select className="sl-company-select" value={selectedCompany} onChange={e => setSelectedCompany(e.target.value)} disabled={userInfo.role !== 'Super Admin'}>
           {companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
       </div>

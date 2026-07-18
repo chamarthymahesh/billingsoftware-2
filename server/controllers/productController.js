@@ -14,7 +14,7 @@ const toProperCase = (str) => {
 // @route  GET /api/products?companyId=xxx
 export const getProducts = async (req, res) => {
   try {
-    const { companyId } = req.query;
+    const companyId = req.query.companyId;
     const filter = companyId ? { companyId } : {};
     const products = await Product.find(filter)
       .populate('companyId', 'name')
@@ -34,8 +34,13 @@ export const createProduct = async (req, res) => {
     if (req.body.brand) req.body.brand = toProperCase(req.body.brand.trim());
     if (req.body.category) req.body.category = toProperCase(req.body.category.trim());
 
-    // Global duplicate check (case‑insensitive)
-    const existing = await Product.findOne({ name: new RegExp(`^${req.body.name}$`, 'i') }).collation({ locale: 'en', strength: 2 });
+    if (req.user.companyId) {
+      req.body.companyId = req.user.companyId;
+    }
+
+    // Duplicate check (case‑insensitive) global across all companies
+    const duplicateFilter = { name: new RegExp(`^${req.body.name}$`, 'i') };
+    const existing = await Product.findOne(duplicateFilter).collation({ locale: 'en', strength: 2 });
     if (existing) {
       return res.status(400).json({ message: 'Product with this name already exists' });
     }
@@ -57,17 +62,25 @@ export const updateProduct = async (req, res) => {
     if (req.body.category) req.body.category = toProperCase(req.body.category.trim());
 
     // Duplicate name check (exclude current id)
+    // Duplicate name check (exclude current id) global across all companies
     if (req.body.name) {
-      const duplicate = await Product.findOne({
+      const duplicateFilter = {
         _id: { $ne: req.params.id },
         name: new RegExp(`^${req.body.name}$`, 'i')
-      }).collation({ locale: 'en', strength: 2 });
+      };
+      const duplicate = await Product.findOne(duplicateFilter).collation({ locale: 'en', strength: 2 });
       if (duplicate) {
         return res.status(400).json({ message: 'Product with this name already exists' });
       }
     }
 
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const query = { _id: req.params.id };
+    if (req.user.companyId) {
+      query.companyId = req.user.companyId;
+      req.body.companyId = req.user.companyId;
+    }
+
+    const product = await Product.findOneAndUpdate(query, req.body, { new: true });
     if (!product) return res.status(404).json({ message: 'Product not found' });
     res.json(product);
   } catch (err) {
@@ -79,7 +92,11 @@ export const updateProduct = async (req, res) => {
 // @route  DELETE /api/products/:id
 export const deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
+    const query = { _id: req.params.id };
+    if (req.user.companyId) {
+      query.companyId = req.user.companyId;
+    }
+    const product = await Product.findOneAndDelete(query);
     if (!product) return res.status(404).json({ message: 'Product not found' });
     res.json({ message: 'Product deleted' });
   } catch (err) {

@@ -1,12 +1,13 @@
 import Invoice from '../models/Invoice.js';
 import Product from '../models/Product.js';
+import { getStateWithCode } from '../utils/stateHelper.js';
 
 // GET /api/invoices?companyId=xxx
 const getInvoices = async (req, res) => {
   try {
-    const { companyId } = req.query;
-    if (!companyId) return res.status(400).json({ message: 'companyId required' });
-    const invoices = await Invoice.find({ company: companyId }).sort({ invoiceDate: -1 });
+    const company = req.user.companyId || req.query.companyId;
+    if (!company) return res.status(400).json({ message: 'companyId required' });
+    const invoices = await Invoice.find({ company }).sort({ invoiceDate: -1 });
     res.json(invoices);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -16,8 +17,9 @@ const getInvoices = async (req, res) => {
 // GET /api/invoices/next-number?companyId=xxx
 const getNextInvoiceNumber = async (req, res) => {
   try {
-    const { companyId } = req.query;
-    const count = await Invoice.countDocuments({ company: companyId });
+    const company = req.user.companyId || req.query.companyId;
+    if (!company) return res.status(400).json({ message: 'companyId required' });
+    const count = await Invoice.countDocuments({ company });
     const nextNum = `INV-${String(count + 1).padStart(4, '0')}`;
     res.json({ invoiceNumber: nextNum });
   } catch (err) {
@@ -30,6 +32,9 @@ const getInvoice = async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id).populate('items.product');
     if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
+    if (req.user.companyId && invoice.company.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ message: 'Not authorized to access this invoice' });
+    }
     res.json(invoice);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -39,6 +44,15 @@ const getInvoice = async (req, res) => {
 // POST /api/invoices
 const createInvoice = async (req, res) => {
   try {
+    if (req.user.companyId) {
+      req.body.company = req.user.companyId;
+    }
+    if (req.body.customerState !== undefined) {
+      req.body.customerState = getStateWithCode(req.body.customerState, req.body.customerGSTIN);
+    }
+    if (req.body.placeOfSupply !== undefined) {
+      req.body.placeOfSupply = getStateWithCode(req.body.placeOfSupply, req.body.customerGSTIN);
+    }
     const {
       company, invoiceNumber, invoiceDate, paymentStatus, paymentMethod,
       customerName, customerPhone, customerGSTIN, customerState,
@@ -54,10 +68,54 @@ const createInvoice = async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    // Reduce stock
+    // Reduce stock and create inter-company purchase invoices for global products
     for (const item of items) {
       if (item.product) {
-        await Product.findByIdAndUpdate(item.product, { $inc: { stock: -Number(item.qty) } });
+        // Find product to see if it belongs to a different company than the invoice selling company
+        const productObj = await Product.findById(item.product).populate('companyId');
+        if (productObj) {
+          const isForeign = String(productObj.companyId?._id || productObj.companyId) !== String(company);
+          
+          if (isForeign) {
+            // Create a purchase invoice from the owning company to the selling company
+            const Purchase = (await import('../models/Purchase.js')).default;
+            
+            // Calculate totals for purchase
+            const qty = Number(item.qty);
+            const rate = productObj.purchasePrice || Number(item.rate);
+            const gstRate = productObj.gstRate || 18;
+            const itemsTotal = qty * rate;
+            const grandTotal = itemsTotal * (1 + gstRate / 100);
+
+            const purchase = new Purchase({
+              targetCompany: company,
+              supplierName: productObj.companyId.name,
+              supplierGSTIN: productObj.companyId.gstin === 'N/A' ? '' : (productObj.companyId.gstin || ''),
+              billNumber: `AUTO-${invoiceNumber}`,
+              purchaseDate: invoiceDate || new Date(),
+              paymentStatus: 'Paid',
+              items: [{
+                product: productObj._id,
+                qty: qty,
+                rate: rate,
+                gstRate: gstRate,
+                isInclusive: false,
+                total: Number(grandTotal.toFixed(2))
+              }],
+              itemsTotal: Number(itemsTotal.toFixed(2)),
+              extraCharges: 0,
+              grandTotal: Number(grandTotal.toFixed(2))
+            });
+            await purchase.save();
+
+            // Offset the stock increment from the purchase save (since purchase save automatically increments stock).
+            // Net effect: reduce stock of the owning company by qty
+            await Product.findByIdAndUpdate(productObj._id, { $inc: { stock: -Number(item.qty) } });
+          }
+
+          // Decrement stock for the invoice item (standard behavior)
+          await Product.findByIdAndUpdate(item.product, { $inc: { stock: -Number(item.qty) } });
+        }
       }
     }
 
@@ -103,6 +161,9 @@ const deleteInvoice = async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
+    if (req.user.companyId && invoice.company.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ message: 'Not authorized to delete this invoice' });
+    }
 
     // Restore stock for deleted items
     for (const item of invoice.items) {
@@ -123,6 +184,15 @@ const updateInvoice = async (req, res) => {
   try {
     const existingInvoice = await Invoice.findById(req.params.id);
     if (!existingInvoice) return res.status(404).json({ message: 'Invoice not found' });
+    if (req.user.companyId && existingInvoice.company.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ message: 'Not authorized to update this invoice' });
+    }
+    if (req.body.customerState !== undefined) {
+      req.body.customerState = getStateWithCode(req.body.customerState, req.body.customerGSTIN);
+    }
+    if (req.body.placeOfSupply !== undefined) {
+      req.body.placeOfSupply = getStateWithCode(req.body.placeOfSupply, req.body.customerGSTIN);
+    }
 
     const {
       company, invoiceNumber, invoiceDate, paymentStatus, paymentMethod,
@@ -156,7 +226,7 @@ const updateInvoice = async (req, res) => {
     const tax = Number(totalTax) || 0;
     const calculatedGrandTotal = sub + tax + pkg + trp + oth - comm;
 
-    existingInvoice.company = company || existingInvoice.company;
+    existingInvoice.company = req.user.companyId || company || existingInvoice.company;
     existingInvoice.invoiceNumber = invoiceNumber || existingInvoice.invoiceNumber;
     existingInvoice.invoiceDate = invoiceDate || existingInvoice.invoiceDate;
     existingInvoice.paymentStatus = paymentStatus || existingInvoice.paymentStatus;
@@ -200,8 +270,13 @@ const updateBulkStatus = async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
+    const filter = { _id: { $in: invoiceIds } };
+    if (req.user.companyId) {
+      filter.company = req.user.companyId;
+    }
+
     await Invoice.updateMany(
-      { _id: { $in: invoiceIds } },
+      filter,
       { $set: { paymentStatus: status } }
     );
 
@@ -222,8 +297,13 @@ const updateBulkCommissionStatus = async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
+    const filter = { _id: { $in: invoiceIds } };
+    if (req.user.companyId) {
+      filter.company = req.user.companyId;
+    }
+
     await Invoice.updateMany(
-      { _id: { $in: invoiceIds } },
+      filter,
       { $set: { commissionStatus: status } }
     );
 
