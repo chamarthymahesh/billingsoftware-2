@@ -49,34 +49,62 @@ const GSTR1Report = () => {
                : section === 'hsnB2b' ? report.hsnB2B 
                : report.hsnB2C;
     let csv = '';
-    if (section === 'b2b' || section === 'b2c') {
-      csv = 'Invoice No,Date,Customer,GSTIN,Place of Supply,Tax Type,Taxable Value,CGST,SGST,IGST,Total Tax,Grand Total\n';
+    if (section === 'b2b') {
+      csv = 'GST Number,Customer name,Invoice No,Invoice Date,Invoice Value,Place of supply,Invoice Type,Reverse Charge,Applicable % of tax rate,Rate,Taxable value,Cess amount\n';
+      csv += rows.map(r => [
+        r.customerGSTIN || '',
+        `"${r.customerName}"`,
+        r.invoiceNumber,
+        new Date(r.invoiceDate).toLocaleDateString('en-IN'),
+        r.invoiceValue?.toFixed(2),
+        r.placeOfSupply || '',
+        r.invoiceType || '',
+        r.reverseCharge || '0',
+        r.applicableTaxRate || '',
+        r.rate + '%',
+        r.taxableValue?.toFixed(2),
+        r.cessAmount || '0',
+      ].join(',')).join('\n');
+    } else if (section === 'b2c') {
+      csv = 'Invoice No,Date,Customer,Place of Supply,Tax Type,Taxable Value,CGST,SGST,IGST,Grand Total\n';
       csv += rows.map(r => [
         r.invoiceNumber,
         new Date(r.invoiceDate).toLocaleDateString('en-IN'),
         `"${r.customerName}"`,
-        r.customerGSTIN || '',
         r.placeOfSupply || '',
         r.taxType || '',
         r.taxableValue?.toFixed(2),
         r.cgst?.toFixed(2),
         r.sgst?.toFixed(2),
         r.igst?.toFixed(2),
-        r.totalTax?.toFixed(2),
         r.grandTotal?.toFixed(2),
       ].join(',')).join('\n');
-    } else {
-      csv = 'HSN,GST Rate,Qty,Taxable Amount,CGST,SGST,IGST,Total Tax,Total Amount\n';
+    } else if (section === 'hsnB2b') {
+      csv = 'HSN,Description,UQC,Total quantity,Total Value,Rate,Taxable Value,Central Tax amount,State/UT Tax amount,Cess amount\n';
       csv += rows.map(r => [
         r.hsn,
-        r.gstRate + '%',
+        `"${r.description}"`,
+        r.uqc,
         r.qty,
+        r.totalValue?.toFixed(2),
+        r.rate + '%',
         r.taxableAmount?.toFixed(2),
         r.cgst?.toFixed(2),
         r.sgst?.toFixed(2),
+        r.cessAmount || '0',
+      ].join(',')).join('\n');
+    } else { // hsnB2c
+      csv = 'HSN,Description,UQC,Total quantity,Total Value,Integrated Tax amount,Central Tax Amount,State/UT tax amount,cess amount\n';
+      csv += rows.map(r => [
+        r.hsn,
+        `"${r.description}"`,
+        r.uqc,
+        r.qty,
+        r.totalValue?.toFixed(2),
         r.igst?.toFixed(2),
-        r.taxAmount?.toFixed(2),
-        r.totalAmount?.toFixed(2),
+        r.cgst?.toFixed(2),
+        r.sgst?.toFixed(2),
+        r.cessAmount || '0',
       ].join(',')).join('\n');
     }
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -84,7 +112,7 @@ const GSTR1Report = () => {
     const a = document.createElement('a');
     a.href = url; a.download = `GSTR1_${section}_${month}_${year}.csv`; a.click();
     URL.revokeObjectURL(url);
-  };
+  }
 
   const tabStyle = (t) => ({
     padding: '8px 20px',
@@ -188,15 +216,56 @@ const GSTR1Report = () => {
               </button>
             </div>
 
-            {/* B2B / B2C Table */}
-            {(activeTab === 'b2b' || activeTab === 'b2c') && (
+            {/* B2B Table */}
+            {activeTab === 'b2b' && (
+              <table className="sl-table">
+                <thead>
+                  <tr>
+                    <th>GST Number</th>
+                    <th>Customer name</th>
+                    <th>Invoice No</th>
+                    <th>Invoice Date</th>
+                    <th>Invoice Value</th>
+                    <th>Place of supply</th>
+                    <th>Invoice Type</th>
+                    <th>Reverse Charge</th>
+                    <th>Applicable % of tax rate</th>
+                    <th>Rate</th>
+                    <th>Taxable value</th>
+                    <th>Cess amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.b2b.length === 0 ? (
+                    <tr><td colSpan={12} className="sl-center">No records found for this period</td></tr>
+                  ) : report.b2b.map((row, i) => (
+                    <tr key={i}>
+                      <td style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{row.customerGSTIN || '-'}</td>
+                      <td className="sl-customer-name">{row.customerName}</td>
+                      <td><span className="sl-code">{row.invoiceNumber}</span></td>
+                      <td>{new Date(row.invoiceDate).toLocaleDateString('en-IN')}</td>
+                      <td>₹{row.invoiceValue?.toFixed(2)}</td>
+                      <td>{row.placeOfSupply || '-'}</td>
+                      <td>{row.invoiceType}</td>
+                      <td>{row.reverseCharge}</td>
+                      <td>{row.applicableTaxRate || '—'}</td>
+                      <td>{row.rate}%</td>
+                      <td>₹{row.taxableValue?.toFixed(2)}</td>
+                      <td>₹{row.cessAmount?.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            {/* B2C Table */}
+            {activeTab === 'b2c' && (
               <table className="sl-table">
                 <thead>
                   <tr>
                     <th>Invoice No</th>
                     <th>Date</th>
                     <th>Customer</th>
-                    {activeTab === 'b2b' && <th>GSTIN</th>}
                     <th>Place of Supply</th>
                     <th>Tax Type</th>
                     <th>Taxable Value</th>
@@ -207,14 +276,13 @@ const GSTR1Report = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {(activeTab === 'b2b' ? report.b2b : report.b2c).length === 0 ? (
-                    <tr><td colSpan={11} className="sl-center">No records found for this period</td></tr>
-                  ) : (activeTab === 'b2b' ? report.b2b : report.b2c).map((row, i) => (
+                  {report.b2c.length === 0 ? (
+                    <tr><td colSpan={10} className="sl-center">No records found for this period</td></tr>
+                  ) : report.b2c.map((row, i) => (
                     <tr key={i}>
                       <td><span className="sl-code">{row.invoiceNumber}</span></td>
                       <td>{new Date(row.invoiceDate).toLocaleDateString('en-IN')}</td>
                       <td className="sl-customer-name">{row.customerName}</td>
-                      {activeTab === 'b2b' && <td style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{row.customerGSTIN || '-'}</td>}
                       <td>{row.placeOfSupply || '-'}</td>
                       <td><span style={tagStyle(row.taxType)}>{row.taxType}</span></td>
                       <td>₹{row.taxableValue?.toFixed(2)}</td>
@@ -228,36 +296,74 @@ const GSTR1Report = () => {
               </table>
             )}
 
-            {/* HSN Summary Table */}
-            {(activeTab === 'hsnB2b' || activeTab === 'hsnB2c') && (
+            {/* HSN B2B Table */}
+            {activeTab === 'hsnB2b' && (
               <table className="sl-table">
                 <thead>
                   <tr>
-                    <th>HSN Code</th>
-                    <th>GST Rate</th>
-                    <th>Total Qty</th>
-                    <th>Taxable Amount</th>
-                    <th>CGST</th>
-                    <th>SGST</th>
-                    <th>IGST</th>
-                    <th>Total Tax</th>
-                    <th>Total Amount</th>
+                    <th>HSN</th>
+                    <th>Description</th>
+                    <th>UQC</th>
+                    <th>Total quantity</th>
+                    <th>Total Value</th>
+                    <th>Rate</th>
+                    <th>Taxable Value</th>
+                    <th>Central Tax amount</th>
+                    <th>State/UT Tax amount</th>
+                    <th>Cess amount</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {((activeTab === 'hsnB2b' ? report.hsnB2B : report.hsnB2C) || []).length === 0 ? (
-                    <tr><td colSpan={9} className="sl-center">No HSN data found</td></tr>
-                  ) : (activeTab === 'hsnB2b' ? report.hsnB2B : report.hsnB2C).map((h, i) => (
+                  {(report.hsnB2B || []).length === 0 ? (
+                    <tr><td colSpan={10} className="sl-center">No HSN data found</td></tr>
+                  ) : report.hsnB2B.map((h, i) => (
                     <tr key={i}>
                       <td><span className="sl-code">{h.hsn}</span></td>
-                      <td>{h.gstRate}%</td>
+                      <td>{h.description}</td>
+                      <td>{h.uqc}</td>
                       <td>{h.qty}</td>
+                      <td>₹{h.totalValue?.toFixed(2)}</td>
+                      <td>{h.rate}%</td>
                       <td>₹{h.taxableAmount?.toFixed(2)}</td>
                       <td style={{ color: '#34d399' }}>₹{h.cgst?.toFixed(2)}</td>
                       <td style={{ color: '#34d399' }}>₹{h.sgst?.toFixed(2)}</td>
+                      <td>₹{h.cessAmount?.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            {/* HSN B2C Table */}
+            {activeTab === 'hsnB2c' && (
+              <table className="sl-table">
+                <thead>
+                  <tr>
+                    <th>HSN</th>
+                    <th>Description</th>
+                    <th>UQC</th>
+                    <th>Total quantity</th>
+                    <th>Total Value</th>
+                    <th>Integrated Tax amount</th>
+                    <th>Central Tax Amount</th>
+                    <th>State/UT tax amount</th>
+                    <th>cess amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(report.hsnB2C || []).length === 0 ? (
+                    <tr><td colSpan={9} className="sl-center">No HSN data found</td></tr>
+                  ) : report.hsnB2C.map((h, i) => (
+                    <tr key={i}>
+                      <td><span className="sl-code">{h.hsn}</span></td>
+                      <td>{h.description}</td>
+                      <td>{h.uqc}</td>
+                      <td>{h.qty}</td>
+                      <td>₹{h.totalValue?.toFixed(2)}</td>
                       <td style={{ color: '#a78bfa' }}>₹{h.igst?.toFixed(2)}</td>
-                      <td>₹{h.taxAmount?.toFixed(2)}</td>
-                      <td className="sl-bold-price">₹{h.totalAmount?.toFixed(2)}</td>
+                      <td style={{ color: '#34d399' }}>₹{h.cgst?.toFixed(2)}</td>
+                      <td style={{ color: '#34d399' }}>₹{h.sgst?.toFixed(2)}</td>
+                      <td>₹{h.cessAmount?.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>

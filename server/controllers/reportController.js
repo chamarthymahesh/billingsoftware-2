@@ -176,6 +176,10 @@ export const getGSTR1Report = asyncHandler(async (req, res) => {
   const b2b = []; // Business-to-Business (customer has GSTIN)
   const b2c = []; // Business-to-Consumer (no GSTIN)
 
+  // Aggregate HSN Summary for B2B and B2C across ALL invoices
+  const hsnB2B = {};
+  const hsnB2C = {};
+
   invoices.forEach(inv => {
     // Determine if intra-state or inter-state
     const customerGSTIN   = inv.customerGSTIN?.trim() || '';
@@ -184,99 +188,103 @@ export const getGSTR1Report = asyncHandler(async (req, res) => {
                             ? sellerStateCode !== buyerStateCode
                             : false; // default intra if unknown
 
-    const taxableValue = inv.subtotal || 0;
-    const totalTax     = inv.totalTax || 0;
+    const isB2B = customerGSTIN.length > 0;
 
-    // Split tax
-    const cgst = isInterState ? 0 : totalTax / 2;
-    const sgst = isInterState ? 0 : totalTax / 2;
-    const igst = isInterState ? totalTax : 0;
-
-    // HSN-wise breakdown per invoice
-    const hsnMap = {};
+    // Group items of this invoice by gstRate
+    const rateGroups = {};
     inv.items.forEach(item => {
-      const hsn     = item.hsnCode || 'NA';
-      const gstRate = Number(item.gstRate) || 0;
-      const taxAmt  = Number(item.taxAmount) || 0;
-      const taxable = Number(item.taxableAmount) || 0;
-      const total   = Number(item.total) || 0;
-
-      const itemIsInterState = isInterState; // same rule per invoice
-      if (!hsnMap[hsn]) {
-        hsnMap[hsn] = {
-          hsn,
-          gstRate,
-          taxableAmount: 0,
-          cgst: 0, sgst: 0, igst: 0,
-          taxAmount: 0,
-          totalAmount: 0,
+      const rate = Number(item.gstRate) || 0;
+      if (!rateGroups[rate]) {
+        rateGroups[rate] = {
+          taxableValue: 0,
+          taxAmount: 0
         };
       }
-      hsnMap[hsn].taxableAmount += taxable;
-      hsnMap[hsn].cgst          += itemIsInterState ? 0 : taxAmt / 2;
-      hsnMap[hsn].sgst          += itemIsInterState ? 0 : taxAmt / 2;
-      hsnMap[hsn].igst          += itemIsInterState ? taxAmt : 0;
-      hsnMap[hsn].taxAmount     += taxAmt;
-      hsnMap[hsn].totalAmount   += total;
+      rateGroups[rate].taxableValue += Number(item.taxableAmount) || 0;
+      rateGroups[rate].taxAmount += Number(item.taxAmount) || 0;
     });
 
-    const entry = {
-      invoiceNumber: inv.invoiceNumber,
-      invoiceDate  : inv.invoiceDate,
-      customerName : inv.customerName,
-      customerGSTIN: customerGSTIN,
-      placeOfSupply: inv.placeOfSupply || '',
-      taxType      : isInterState ? 'IGST' : 'CGST+SGST',
-      taxableValue,
-      cgst,
-      sgst,
-      igst,
-      totalTax,
-      grandTotal   : inv.grandTotal || 0,
-      hsnSummary   : Object.values(hsnMap),
-    };
+    if (isB2B) {
+      Object.entries(rateGroups).forEach(([rateStr, vals]) => {
+        const rate = Number(rateStr);
+        const cgst = isInterState ? 0 : vals.taxAmount / 2;
+        const sgst = isInterState ? 0 : vals.taxAmount / 2;
+        const igst = isInterState ? vals.taxAmount : 0;
 
-    if (customerGSTIN.length > 0) {
-      b2b.push(entry);
+        b2b.push({
+          customerGSTIN,
+          customerName: inv.customerName,
+          invoiceNumber: inv.invoiceNumber,
+          invoiceDate: inv.invoiceDate,
+          invoiceValue: inv.grandTotal || 0,
+          placeOfSupply: inv.placeOfSupply || inv.customerState || '',
+          invoiceType: 'Regular',
+          reverseCharge: '0',
+          applicableTaxRate: '',
+          rate: rate,
+          taxableValue: vals.taxableValue,
+          cessAmount: 0,
+          cgst,
+          sgst,
+          igst
+        });
+      });
     } else {
-      b2c.push(entry);
+      const taxableValue = inv.subtotal || 0;
+      const totalTax     = inv.totalTax || 0;
+      const cgst = isInterState ? 0 : totalTax / 2;
+      const sgst = isInterState ? 0 : totalTax / 2;
+      const igst = isInterState ? totalTax : 0;
+
+      b2c.push({
+        invoiceNumber: inv.invoiceNumber,
+        invoiceDate  : inv.invoiceDate,
+        customerName : inv.customerName,
+        customerGSTIN: customerGSTIN,
+        placeOfSupply: inv.placeOfSupply || '',
+        taxType      : isInterState ? 'IGST' : 'CGST+SGST',
+        taxableValue,
+        cgst,
+        sgst,
+        igst,
+        totalTax,
+        grandTotal   : inv.grandTotal || 0
+      });
     }
-  });
 
-  // Aggregate HSN Summary for B2B and B2C across ALL invoices
-  const hsnB2B = {};
-  const hsnB2C = {};
-  invoices.forEach(inv => {
-    const customerGSTIN  = inv.customerGSTIN?.trim() || '';
-    const buyerStateCode = customerGSTIN.length >= 2 ? customerGSTIN.substring(0, 2) : '';
-    const isInterState   = sellerStateCode && buyerStateCode
-                           ? sellerStateCode !== buyerStateCode
-                           : false;
-
-    const isB2B = customerGSTIN.length > 0;
+    // Populate HSN aggregates
     const targetHsnMap = isB2B ? hsnB2B : hsnB2C;
-
     inv.items.forEach(item => {
       const hsn    = item.hsnCode || 'NA';
+      const desc   = item.productName || 'NA';
+      const uqc    = item.unit || 'Pcs';
+      const rate   = item.gstRate || 0;
+      const key    = `${hsn}_${desc}_${uqc}_${rate}`;
       const taxAmt = Number(item.taxAmount) || 0;
-      if (!targetHsnMap[hsn]) {
-        targetHsnMap[hsn] = {
+
+      if (!targetHsnMap[key]) {
+        targetHsnMap[key] = {
           hsn,
-          gstRate: item.gstRate || 0,
+          description: desc,
+          uqc,
           qty: 0,
+          totalValue: 0,
+          rate,
           taxableAmount: 0,
-          cgst: 0, sgst: 0, igst: 0,
+          cgst: 0,
+          sgst: 0,
+          igst: 0,
           taxAmount: 0,
-          totalAmount: 0,
+          cessAmount: 0,
         };
       }
-      targetHsnMap[hsn].qty          += Number(item.qty) || 0;
-      targetHsnMap[hsn].taxableAmount += Number(item.taxableAmount) || 0;
-      targetHsnMap[hsn].cgst          += isInterState ? 0 : taxAmt / 2;
-      targetHsnMap[hsn].sgst          += isInterState ? 0 : taxAmt / 2;
-      targetHsnMap[hsn].igst          += isInterState ? taxAmt : 0;
-      targetHsnMap[hsn].taxAmount     += taxAmt;
-      targetHsnMap[hsn].totalAmount   += Number(item.total) || 0;
+      targetHsnMap[key].qty           += Number(item.qty) || 0;
+      targetHsnMap[key].totalValue    += Number(item.total) || 0;
+      targetHsnMap[key].taxableAmount += Number(item.taxableAmount) || 0;
+      targetHsnMap[key].cgst          += isInterState ? 0 : taxAmt / 2;
+      targetHsnMap[key].sgst          += isInterState ? 0 : taxAmt / 2;
+      targetHsnMap[key].igst          += isInterState ? taxAmt : 0;
+      targetHsnMap[key].taxAmount     += taxAmt;
     });
   });
 
