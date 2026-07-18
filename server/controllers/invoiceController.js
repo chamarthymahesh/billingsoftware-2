@@ -30,9 +30,9 @@ const getNextInvoiceNumber = async (req, res) => {
 // GET /api/invoices/:id
 const getInvoice = async (req, res) => {
   try {
-    const invoice = await Invoice.findById(req.params.id).populate('items.product');
+    const invoice = await Invoice.findById(req.params.id).populate('company').populate('items.product');
     if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
-    if (req.user.companyId && invoice.company.toString() !== req.user.companyId.toString()) {
+    if (req.user.companyId && invoice.company._id.toString() !== req.user.companyId.toString()) {
       return res.status(403).json({ message: 'Not authorized to access this invoice' });
     }
     res.json(invoice);
@@ -54,7 +54,7 @@ const createInvoice = async (req, res) => {
       req.body.placeOfSupply = getStateWithCode(req.body.placeOfSupply, req.body.customerGSTIN);
     }
     const {
-      company, invoiceNumber, invoiceDate, paymentStatus, paymentMethod,
+      company, invoiceNumber, invoiceDate, gemContractNumber, paymentStatus, paymentMethod,
       customerName, customerPhone, customerGSTIN, customerState,
       billingAddress, shippingAddress, placeOfSupply,
       items, subtotal, totalDiscount, totalTax,
@@ -129,7 +129,7 @@ const createInvoice = async (req, res) => {
     const calculatedGrandTotal = sub + tax + pkg + trp + oth - comm;
 
     const invoice = await Invoice.create({
-      company, invoiceNumber,
+      company, invoiceNumber, gemContractNumber,
       invoiceDate: invoiceDate || new Date(),
       paymentStatus: paymentStatus || 'Pending',
       paymentMethod: paymentMethod || 'Cash',
@@ -195,7 +195,7 @@ const updateInvoice = async (req, res) => {
     }
 
     const {
-      company, invoiceNumber, invoiceDate, paymentStatus, paymentMethod,
+      company, invoiceNumber, invoiceDate, gemContractNumber, paymentStatus, paymentMethod,
       customerName, customerPhone, customerGSTIN, customerState,
       billingAddress, shippingAddress, placeOfSupply,
       items, subtotal, totalDiscount, totalTax,
@@ -229,6 +229,7 @@ const updateInvoice = async (req, res) => {
     existingInvoice.company = req.user.companyId || company || existingInvoice.company;
     existingInvoice.invoiceNumber = invoiceNumber || existingInvoice.invoiceNumber;
     existingInvoice.invoiceDate = invoiceDate || existingInvoice.invoiceDate;
+    existingInvoice.gemContractNumber = gemContractNumber !== undefined ? gemContractNumber : existingInvoice.gemContractNumber;
     existingInvoice.paymentStatus = paymentStatus || existingInvoice.paymentStatus;
     existingInvoice.paymentMethod = paymentMethod || existingInvoice.paymentMethod;
     existingInvoice.customerName = customerName || existingInvoice.customerName;

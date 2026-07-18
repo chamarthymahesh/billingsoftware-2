@@ -105,6 +105,7 @@ const CreateInvoice = () => {
     company: userInfo?.companyId || '',
     invoiceNumber: '',
     invoiceDate: new Date().toISOString().split('T')[0],
+    gemContractNumber: '',
     paymentStatus: 'Pending',
     paymentMethod: 'Cash',
     customerName: '',
@@ -483,9 +484,12 @@ const CreateInvoice = () => {
                   <option>Cash</option>
                   <option>Bank Transfer</option>
                   <option>UPI</option>
-                  <option>Cheque</option>
-                  <option>Credit</option>
+                  <option>Card</option>
                 </select>
+              </div>
+              <div className="ci-field">
+                <label>GEM CONTRACT NUMBER</label>
+                <input type="text" name="gemContractNumber" value={form.gemContractNumber} onChange={handleInput} placeholder="e.g. GEMC-5116877..." />
               </div>
               <div className="ci-field">
                 <label>PLACE OF SUPPLY</label>

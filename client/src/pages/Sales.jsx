@@ -173,6 +173,7 @@ const Sales = () => {
               </th>
               <th>Date</th>
               <th>Invoice #</th>
+              <th>GeM Contract</th>
               <th>Customer</th>
               <th>Items</th>
               <th>Subtotal</th>
@@ -184,10 +185,10 @@ const Sales = () => {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} className="sl-center">Loading...</td></tr>
+              <tr><td colSpan={11} className="sl-center">Loading...</td></tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={9} className="sl-center">
+                <td colSpan={11} className="sl-center">
                   <FileText size={36} style={{ color: '#334155', marginBottom: '0.5rem' }} />
                   <div>No sales invoices found.</div>
                 </td>
@@ -200,6 +201,7 @@ const Sales = () => {
                   </td>
                   <td>{s.invoiceDate ? new Date(s.invoiceDate).toLocaleDateString('en-IN') : '-'}</td>
                   <td><span className="sl-code">{s.invoiceNumber || '-'}</span></td>
+                  <td><span className="sl-code" style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{s.gemContractNumber || '—'}</span></td>
                   <td><div className="sl-customer-name">{s.customerName || '-'}</div></td>
                   <td>{s.items?.length || 0} items</td>
                   <td>₹{(s.subtotal || 0).toFixed(2)}</td>

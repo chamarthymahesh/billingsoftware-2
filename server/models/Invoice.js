@@ -21,6 +21,7 @@ const invoiceSchema = mongoose.Schema(
     company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
     invoiceNumber: { type: String, required: true },
     invoiceDate: { type: Date, required: true },
+    gemContractNumber: { type: String, default: '' },
     paymentStatus: { type: String, enum: ['Paid', 'Pending', 'Partial'], default: 'Pending' },
     paymentMethod: { type: String, default: 'Cash' },
     // Customer
