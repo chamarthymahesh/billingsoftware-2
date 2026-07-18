@@ -47,7 +47,13 @@ const Settings = () => {
     showLogo: true,
     showSignature: true,
     invoiceTitle: 'TAX INVOICE',
-    companyAddressFontSize: '14px'
+    companyAddressFontSize: '14px',
+    logoPosition: 'left',
+    metaPosition: 'right',
+    addressLayout: 'side-by-side',
+    signaturePosition: 'right',
+    termsPosition: 'left',
+    tableStyle: 'bordered'
   });
 
   useEffect(() => {
@@ -101,7 +107,13 @@ const Settings = () => {
       showLogo: company.invoiceTemplates?.showLogo !== undefined ? company.invoiceTemplates.showLogo : true,
       showSignature: company.invoiceTemplates?.showSignature !== undefined ? company.invoiceTemplates.showSignature : true,
       invoiceTitle: company.invoiceTemplates?.invoiceTitle || 'TAX INVOICE',
-      companyAddressFontSize: company.invoiceTemplates?.companyAddressFontSize || '14px'
+      companyAddressFontSize: company.invoiceTemplates?.companyAddressFontSize || '14px',
+      logoPosition: company.invoiceTemplates?.logoPosition || 'left',
+      metaPosition: company.invoiceTemplates?.metaPosition || 'right',
+      addressLayout: company.invoiceTemplates?.addressLayout || 'side-by-side',
+      signaturePosition: company.invoiceTemplates?.signaturePosition || 'right',
+      termsPosition: company.invoiceTemplates?.termsPosition || 'left',
+      tableStyle: company.invoiceTemplates?.tableStyle || 'bordered'
     });
   };
 
@@ -319,6 +331,51 @@ const Settings = () => {
                 <option value="16px">Large (16px)</option>
               </select>
             </div>
+            <div className="form-group">
+              <label>LOGO POSITION</label>
+              <select name="logoPosition" value={invoiceTemplates.logoPosition} onChange={handleTemplateChange}>
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>METADATA POSITION</label>
+              <select name="metaPosition" value={invoiceTemplates.metaPosition} onChange={handleTemplateChange}>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>ADDRESSES LAYOUT</label>
+              <select name="addressLayout" value={invoiceTemplates.addressLayout} onChange={handleTemplateChange}>
+                <option value="side-by-side">Side-by-Side</option>
+                <option value="stacked">Stacked</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>SIGNATURE ALIGNMENT</label>
+              <select name="signaturePosition" value={invoiceTemplates.signaturePosition} onChange={handleTemplateChange}>
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>TERMS BLOCK POSITION</label>
+              <select name="termsPosition" value={invoiceTemplates.termsPosition} onChange={handleTemplateChange}>
+                <option value="left">Left (Totals on Right)</option>
+                <option value="right">Right (Totals on Left)</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>TABLE STYLE</label>
+              <select name="tableStyle" value={invoiceTemplates.tableStyle} onChange={handleTemplateChange}>
+                <option value="bordered">Bordered Outline</option>
+                <option value="minimal">Minimal (Borders Bottom)</option>
+                <option value="striped">Striped Rows</option>
+              </select>
+            </div>
             <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
               <input type="checkbox" id="showLogo" name="showLogo" checked={invoiceTemplates.showLogo} onChange={handleCheckboxChange} />
               <label htmlFor="showLogo" style={{ cursor: 'pointer', margin: 0 }}>SHOW LOGO</label>
@@ -378,18 +435,23 @@ const Settings = () => {
               margin: '-24px -24px 20px -24px'
             }}></div>
 
-            {/* Header */}
+            {/* Header layout */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              flexDirection: invoiceTemplates.headerStyle.includes('Center') ? 'column' : (invoiceTemplates.headerStyle.includes('Right') || invoiceTemplates.headerStyle.includes('Modern') ? 'row-reverse' : 'row'),
-              textAlign: invoiceTemplates.headerStyle.includes('Center') ? 'center' : 'left',
-              gap: '12px'
+              alignItems: invoiceTemplates.logoPosition === 'center' ? 'center' : 'flex-start',
+              flexDirection: invoiceTemplates.metaPosition === 'left' ? 'row-reverse' : 'row',
+              gap: '24px',
+              flexWrap: 'wrap'
             }}>
-              <div style={{ width: invoiceTemplates.headerStyle.includes('Center') ? '100%' : 'auto' }}>
+              {/* Company Info container */}
+              <div style={{
+                textAlign: invoiceTemplates.logoPosition === 'center' ? 'center' : (invoiceTemplates.logoPosition === 'right' ? 'right' : 'left'),
+                flex: 1,
+                minWidth: '200px'
+              }}>
                 {invoiceTemplates.showLogo && invoiceTemplates.logoImage ? (
-                  <img src={invoiceTemplates.logoImage} alt="Logo" style={{ maxHeight: '40px', marginBottom: '8px' }} />
+                  <img src={invoiceTemplates.logoImage} alt="Logo" style={{ maxHeight: '45px', marginBottom: '8px', display: 'inline-block' }} />
                 ) : (
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: invoiceTemplates.primaryColor, marginBottom: '4px' }}>
                     {companyProfile.name || 'YOUR COMPANY NAME'}
@@ -402,10 +464,12 @@ const Settings = () => {
                   GSTIN: {companyProfile.gstin || '29AAAAA1111A1ZA'} | Phone: {companyProfile.phone || '9999999999'}
                 </p>
               </div>
+              
+              {/* Metadata container */}
               <div style={{
-                textAlign: invoiceTemplates.headerStyle.includes('Center') ? 'center' : (invoiceTemplates.headerStyle.includes('Right') || invoiceTemplates.headerStyle.includes('Modern') ? 'left' : 'right'),
-                width: invoiceTemplates.headerStyle.includes('Center') ? '100%' : 'auto',
-                marginTop: invoiceTemplates.headerStyle.includes('Center') ? '12px' : 0
+                textAlign: invoiceTemplates.metaPosition === 'left' ? 'left' : 'right',
+                minWidth: '180px',
+                marginTop: invoiceTemplates.logoPosition === 'center' ? '12px' : 0
               }}>
                 <div style={{
                   fontSize: '0.85rem',
@@ -431,28 +495,68 @@ const Settings = () => {
 
             <hr style={{ border: '0', borderTop: '1px solid #cbd5e1', margin: '16px 0' }} />
 
+            {/* Addresses layout */}
+            <div style={{
+              display: 'flex',
+              gap: '24px',
+              flexDirection: invoiceTemplates.addressLayout === 'stacked' ? 'column' : 'row',
+              marginBottom: '20px'
+            }}>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: invoiceTemplates.primaryColor, fontWeight: 700 }}>BILL TO:</h4>
+                <p style={{ margin: 0, fontSize: '11px', fontWeight: 600 }}>Sample Customer</p>
+                <p style={{ margin: 0, fontSize: '11px', color: '#475569' }}>Customer Address, City, State</p>
+              </div>
+              <div style={{
+                flex: 1,
+                borderLeft: (invoiceTemplates.addressLayout === 'stacked' ? 'none' : '1px solid #e2e8f0'),
+                paddingLeft: (invoiceTemplates.addressLayout === 'stacked' ? 0 : '24px')
+              }}>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: invoiceTemplates.primaryColor, fontWeight: 700 }}>SHIP TO:</h4>
+                <p style={{ margin: 0, fontSize: '11px', color: '#475569' }}>Delivery Destination, City, State</p>
+              </div>
+            </div>
+
             {/* Items table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: '16px' }}>
+            <table style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: '11px',
+              marginBottom: '16px',
+              border: invoiceTemplates.tableStyle === 'bordered' ? '1px solid #cbd5e1' : 'none'
+            }}>
               <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: `2px solid ${invoiceTemplates.primaryColor}` }}>
-                  <th style={{ padding: '6px', textAlign: 'left', color: '#475569', textTransform: 'uppercase' }}>Item Description</th>
-                  <th style={{ padding: '6px', textAlign: 'right', color: '#475569', textTransform: 'uppercase' }}>Qty</th>
-                  <th style={{ padding: '6px', textAlign: 'right', color: '#475569', textTransform: 'uppercase' }}>Rate</th>
-                  <th style={{ padding: '6px', textAlign: 'right', color: '#475569', textTransform: 'uppercase' }}>Total</th>
+                <tr style={{
+                  background: '#f8fafc',
+                  borderBottom: `2px solid ${invoiceTemplates.primaryColor}`
+                }}>
+                  <th style={{ padding: '6px', textAlign: 'left', color: '#475569', textTransform: 'uppercase', border: invoiceTemplates.tableStyle === 'bordered' ? '1px solid #cbd5e1' : 'none' }}>Item Description</th>
+                  <th style={{ padding: '6px', textAlign: 'right', color: '#475569', textTransform: 'uppercase', border: invoiceTemplates.tableStyle === 'bordered' ? '1px solid #cbd5e1' : 'none' }}>Qty</th>
+                  <th style={{ padding: '6px', textAlign: 'right', color: '#475569', textTransform: 'uppercase', border: invoiceTemplates.tableStyle === 'bordered' ? '1px solid #cbd5e1' : 'none' }}>Rate</th>
+                  <th style={{ padding: '6px', textAlign: 'right', color: '#475569', textTransform: 'uppercase', border: invoiceTemplates.tableStyle === 'bordered' ? '1px solid #cbd5e1' : 'none' }}>Total</th>
                 </tr>
               </thead>
               <tbody>
-                <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                  <td style={{ padding: '6px', fontWeight: 600 }}>Sample Premium Product</td>
-                  <td style={{ padding: '6px', textAlign: 'right' }}>2 Pcs</td>
-                  <td style={{ padding: '6px', textAlign: 'right' }}>₹500.00</td>
-                  <td style={{ padding: '6px', textAlign: 'right', fontWeight: 600 }}>₹1,000.00</td>
+                <tr style={{
+                  background: invoiceTemplates.tableStyle === 'striped' ? '#f8fafc' : 'transparent',
+                  borderBottom: invoiceTemplates.tableStyle === 'bordered' ? '1px solid #cbd5e1' : '1px solid #e2e8f0'
+                }}>
+                  <td style={{ padding: '6px', fontWeight: 600, border: invoiceTemplates.tableStyle === 'bordered' ? '1px solid #cbd5e1' : 'none' }}>Sample Premium Product</td>
+                  <td style={{ padding: '6px', textAlign: 'right', border: invoiceTemplates.tableStyle === 'bordered' ? '1px solid #cbd5e1' : 'none' }}>2 Pcs</td>
+                  <td style={{ padding: '6px', textAlign: 'right', border: invoiceTemplates.tableStyle === 'bordered' ? '1px solid #cbd5e1' : 'none' }}>₹500.00</td>
+                  <td style={{ padding: '6px', textAlign: 'right', fontWeight: 600, border: invoiceTemplates.tableStyle === 'bordered' ? '1px solid #cbd5e1' : 'none' }}>₹1,000.00</td>
                 </tr>
               </tbody>
             </table>
 
             {/* Bottom block */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end',
+              flexDirection: invoiceTemplates.termsPosition === 'right' ? 'row-reverse' : 'row',
+              gap: '24px'
+            }}>
               <div style={{ flex: 1, fontSize: '9px', color: '#64748b', whiteSpace: 'pre-line' }}>
                 <strong>Terms & Conditions:</strong><br />
                 {invoiceTemplates.termsAndConditions}
@@ -471,9 +575,17 @@ const Settings = () => {
                   <span>₹1,180.00</span>
                 </div>
                 {invoiceTemplates.showSignature && branding.signatureImage && (
-                  <div style={{ marginTop: '12px', textAlign: 'center' }}>
-                    <img src={branding.signatureImage} alt="Sig" style={{ maxHeight: '35px', objectFit: 'contain' }} />
-                    <div style={{ borderTop: '1px solid #0f172a', fontSize: '9px', marginTop: '2px' }}>Authorized Signatory</div>
+                  <div style={{
+                    marginTop: '12px',
+                    textAlign: invoiceTemplates.signaturePosition,
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: invoiceTemplates.signaturePosition === 'center' ? 'center' : (invoiceTemplates.signaturePosition === 'left' ? 'flex-start' : 'flex-end')
+                  }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <img src={branding.signatureImage} alt="Sig" style={{ maxHeight: '35px', objectFit: 'contain' }} />
+                      <div style={{ borderTop: '1px solid #0f172a', fontSize: '9px', marginTop: '2px', padding: '0 8px' }}>Authorized Signatory</div>
+                    </div>
                   </div>
                 )}
               </div>

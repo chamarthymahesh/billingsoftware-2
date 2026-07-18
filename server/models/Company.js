@@ -48,7 +48,13 @@ const companySchema = mongoose.Schema(
       showLogo: { type: Boolean, default: true },
       showSignature: { type: Boolean, default: true },
       invoiceTitle: { type: String, default: 'TAX INVOICE' },
-      companyAddressFontSize: { type: String, default: '14px' }
+      companyAddressFontSize: { type: String, default: '14px' },
+      logoPosition: { type: String, default: 'left' },
+      metaPosition: { type: String, default: 'right' },
+      addressLayout: { type: String, default: 'side-by-side' },
+      signaturePosition: { type: String, default: 'right' },
+      termsPosition: { type: String, default: 'left' },
+      tableStyle: { type: String, default: 'bordered' }
     }
   },
   {

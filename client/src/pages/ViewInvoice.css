@@ -337,7 +337,7 @@
   .company-name { font-size: 1.8rem !important; margin-bottom: 4px !important; }
   .invoice-type { padding: 4px 12px !important; font-size: 1.1rem !important; margin-bottom: 8px !important; }
   .divider { margin: 20px 0 !important; }
-  .address-container { display: flex !important; flex-direction: row !important; margin-bottom: 20px !important; gap: 30px !important; }
+  .address-container { display: flex !important; margin-bottom: 20px !important; gap: 30px !important; }
   .section-title { font-size: 0.9rem !important; margin-bottom: 8px !important; }
   .customer-name { font-size: 1.1rem !important; }
   .invoice-table { margin-bottom: 24px !important; }
@@ -349,4 +349,72 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+}
+
+/* ─── Layout & Positioning Classes ────────────────── */
+.invoice-header.header-logo-center {
+  flex-direction: column !important;
+  align-items: center !important;
+  text-align: center !important;
+}
+.invoice-header.header-logo-center .company-info {
+  margin-bottom: 20px;
+  text-align: center !important;
+}
+.invoice-header.header-logo-right {
+  flex-direction: row-reverse !important;
+}
+.invoice-header.header-logo-right .company-info {
+  text-align: right !important;
+}
+.invoice-header.header-meta-left {
+  flex-direction: row-reverse !important;
+}
+.invoice-header.header-logo-center.header-meta-left {
+  flex-direction: column !important;
+}
+
+.address-container.layout-stacked {
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+.address-container.layout-stacked .ship-to-section {
+  border-left: none !important;
+  padding-left: 0 !important;
+  margin-top: 10px;
+}
+
+.invoice-table.table-style-minimal {
+  border: none !important;
+}
+.invoice-table.table-style-minimal th {
+  background: transparent !important;
+  border-bottom: 2px solid var(--primary-color) !important;
+}
+.invoice-table.table-style-minimal tr {
+  border-bottom: 1px solid #cbd5e1 !important;
+}
+.invoice-table.table-style-striped tbody tr:nth-child(even) {
+  background-color: #f8fafc !important;
+}
+.invoice-table.table-style-bordered {
+  border: 1px solid #cbd5e1 !important;
+}
+.invoice-table.table-style-bordered th, 
+.invoice-table.table-style-bordered td {
+  border: 1px solid #cbd5e1 !important;
+}
+
+.invoice-summary-container.layout-terms-right {
+  flex-direction: row-reverse !important;
+}
+
+.invoice-footer.align-sig-left {
+  justify-content: flex-start !important;
+}
+.invoice-footer.align-sig-center {
+  justify-content: center !important;
+}
+.invoice-footer.align-sig-right {
+  justify-content: flex-end !important;
 }

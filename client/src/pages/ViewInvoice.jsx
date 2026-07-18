@@ -69,6 +69,13 @@ const ViewInvoice = () => {
   const logoImage = templates.logoImage || '';
   const invoiceTitle = templates.invoiceTitle || (isGst ? 'TAX INVOICE' : 'INVOICE');
 
+  const logoPosition = templates.logoPosition || 'left';
+  const metaPosition = templates.metaPosition || 'right';
+  const addressLayout = templates.addressLayout || 'side-by-side';
+  const signaturePosition = templates.signaturePosition || 'right';
+  const termsPosition = templates.termsPosition || 'left';
+  const tableStyle = templates.tableStyle || 'bordered';
+
   return (
     <div className="sl-page">
       <div className="sl-header no-print">
@@ -91,7 +98,7 @@ const ViewInvoice = () => {
         '--secondary-bg-color': `${secondaryColor}15`
       }}>
         {/* Invoice Header */}
-        <div className="invoice-header">
+        <div className={`invoice-header header-logo-${logoPosition} header-meta-${metaPosition}`}>
           <div className="company-info" style={{ fontSize: addressFontSize }}>
             {showLogo && logoImage ? (
               <img src={logoImage} alt="Company Logo" style={{ maxHeight: '80px', marginBottom: '12px', objectFit: 'contain' }} />
@@ -125,7 +132,7 @@ const ViewInvoice = () => {
         <hr className="divider" />
 
         {/* Billing & Shipping Section */}
-        <div className="address-container">
+        <div className={`address-container layout-${addressLayout}`}>
           <div className="bill-to-section">
             <h3 className="section-title">Bill To:</h3>
             <div className="customer-info">
@@ -150,7 +157,7 @@ const ViewInvoice = () => {
         </div>
 
         {/* Items Table */}
-        <table className="invoice-table">
+        <table className={`invoice-table table-style-${tableStyle}`}>
           <thead>
             <tr>
               <th>Description</th>
@@ -178,7 +185,7 @@ const ViewInvoice = () => {
         </table>
 
         {/* Summary Section */}
-        <div className="invoice-summary-container">
+        <div className={`invoice-summary-container layout-terms-${termsPosition}`}>
           <div className="invoice-notes">
             {(invoice.notes || invoice.termsConditions) && (
               <>
@@ -239,8 +246,8 @@ const ViewInvoice = () => {
 
         {/* Footer */}
         {showSignature && (
-          <div className="invoice-footer">
-            <div className="footer-sign" style={{ textAlign: 'center' }}>
+          <div className={`invoice-footer align-sig-${signaturePosition}`}>
+            <div className="footer-sign">
               {invoice.company?.signatureImage ? (
                 <img 
                   src={invoice.company.signatureImage} 
