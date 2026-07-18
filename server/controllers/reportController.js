@@ -115,6 +115,7 @@ export const getInvoiceProfitReport = asyncHandler(async (req, res) => {
     {
       $project: {
         _id: 1,
+        company: 1,
         invoiceNumber: 1,
         invoiceDate: 1,
         customerName: 1,

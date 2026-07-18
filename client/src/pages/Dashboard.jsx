@@ -17,6 +17,7 @@ const Dashboard = () => {
   const [totalPurchases, setTotalPurchases] = useState(0);
   const [totalTransport, setTotalTransport] = useState(0);
   const [totalCommission, setTotalCommission] = useState(0);
+  const [companyBreakdown, setCompanyBreakdown] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -48,6 +49,41 @@ const Dashboard = () => {
         const totalPurch = purchasesData.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
         setTotalPurchases(totalPurch);
 
+        // Group statistics by company for breakdown
+        const compList = compRes.data;
+        const breakdown = compList.map(comp => {
+          const compId = comp._id;
+          
+          // Filter invoices for this company
+          const compInvoices = reportData.filter(inv => {
+            const invCompId = inv.company?._id || inv.company;
+            return String(invCompId) === String(compId);
+          });
+          
+          // Filter purchases for this company
+          const compPurchases = purchasesData.filter(p => {
+            const pCompId = p.targetCompany?._id || p.targetCompany;
+            return String(pCompId) === String(compId);
+          });
+
+          const profit = compInvoices.reduce((sum, inv) => sum + (inv.finalProfit || 0), 0);
+          const revenue = compInvoices.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
+          const transport = compInvoices.reduce((sum, inv) => sum + (inv.transportCharges || 0), 0);
+          const commission = compInvoices.reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
+          const purchases = compPurchases.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
+
+          return {
+            companyName: comp.name,
+            profit,
+            revenue,
+            purchases,
+            transport,
+            commission
+          };
+        });
+
+        setCompanyBreakdown(breakdown);
+
       } catch (err) {
         console.error('Dashboard fetch error', err);
       } finally {
@@ -56,7 +92,9 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, []);  const isSuperAdmin = userInfo?.role === 'Super Admin';
+  }, []);
+
+  const isSuperAdmin = userInfo?.role === 'Super Admin';
 
   return (
     <div className="sl-page">
@@ -134,6 +172,42 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+
+          {isSuperAdmin && (
+            <div style={{ marginTop: '40px', background: 'rgba(30,41,59,0.7)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <h3 style={{ color: '#F8FAFC', marginBottom: '16px', fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Building2 size={20} color="#3b82f6" /> Company-Wise Financial Breakdown
+              </h3>
+              <div className="sl-table-wrap">
+                <table className="sl-table">
+                  <thead>
+                    <tr>
+                      <th style={{ color: '#94a3b8' }}>Company Name</th>
+                      <th style={{ color: '#94a3b8' }}>Total Profit</th>
+                      <th style={{ color: '#94a3b8' }}>Total Revenue</th>
+                      <th style={{ color: '#94a3b8' }}>Total Purchases</th>
+                      <th style={{ color: '#94a3b8' }}>Total Transport</th>
+                      <th style={{ color: '#94a3b8' }}>Total Commission</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {companyBreakdown.length === 0 ? (
+                      <tr><td colSpan={6} className="sl-center">No company data found</td></tr>
+                    ) : companyBreakdown.map((row, i) => (
+                      <tr key={i}>
+                        <td className="sl-customer-name" style={{ color: '#F8FAFC' }}>{row.companyName}</td>
+                        <td style={{ color: '#10b981', fontWeight: 600 }}>₹{row.profit.toFixed(2)}</td>
+                        <td style={{ color: '#F8FAFC' }}>₹{row.revenue.toFixed(2)}</td>
+                        <td style={{ color: '#F8FAFC' }}>₹{row.purchases.toFixed(2)}</td>
+                        <td style={{ color: '#F8FAFC' }}>₹{row.transport.toFixed(2)}</td>
+                        <td style={{ color: '#F8FAFC' }}>₹{row.commission.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           <div style={{ marginTop: '40px', background: 'rgba(30,41,59,0.5)', padding: '30px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
              <Activity size={48} style={{ color: '#3b82f6', opacity: 0.5, marginBottom: '16px' }} />
