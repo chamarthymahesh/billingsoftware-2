@@ -47,7 +47,8 @@ const GSTR1Report = () => {
     const rows = section === 'b2b' ? report.b2b 
                : section === 'b2c' ? report.b2c 
                : section === 'hsnB2b' ? report.hsnB2B 
-               : report.hsnB2C;
+               : section === 'hsnB2c' ? report.hsnB2C
+               : report.docs || [];
     let csv = '';
     if (section === 'b2b') {
       csv = 'GST Number,Customer name,Invoice No,Invoice Date,Invoice Value,Place of supply,Invoice Type,Reverse Charge,Applicable % of tax rate,Rate,Taxable value,Cess amount\n';
@@ -93,7 +94,7 @@ const GSTR1Report = () => {
         r.sgst?.toFixed(2),
         r.cessAmount || '0',
       ].join(',')).join('\n');
-    } else { // hsnB2c
+    } else if (section === 'hsnB2c') {
       csv = 'HSN,Description,UQC,Total quantity,Total Value,Integrated Tax amount,Central Tax Amount,State/UT tax amount,cess amount\n';
       csv += rows.map(r => [
         r.hsn,
@@ -105,6 +106,16 @@ const GSTR1Report = () => {
         r.cgst?.toFixed(2),
         r.sgst?.toFixed(2),
         r.cessAmount || '0',
+      ].join(',')).join('\n');
+    } else if (section === 'docs') {
+      csv = 'Nature of Document,Sr. No from,Sr. No. To,Total Number,Cancelled,Net Issued\n';
+      csv += rows.map(r => [
+        `"${r.nature}"`,
+        r.from,
+        r.to,
+        r.total,
+        r.cancelled,
+        r.netIssued
       ].join(',')).join('\n');
     }
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -207,6 +218,7 @@ const GSTR1Report = () => {
             <button style={tabStyle('b2c')} onClick={() => setActiveTab('b2c')}>B2C ({report.b2c.length})</button>
             <button style={tabStyle('hsnB2b')} onClick={() => setActiveTab('hsnB2b')}>HSN B2B ({report.hsnB2B?.length || 0})</button>
             <button style={tabStyle('hsnB2c')} onClick={() => setActiveTab('hsnB2c')}>HSN B2C ({report.hsnB2C?.length || 0})</button>
+            <button style={tabStyle('docs')} onClick={() => setActiveTab('docs')}>DOCS ({report.docs?.length || 0})</button>
           </div>
 
           <div className="sl-table-wrap" style={{ borderRadius: '0 8px 8px 8px' }}>
@@ -364,6 +376,36 @@ const GSTR1Report = () => {
                       <td style={{ color: '#34d399' }}>₹{h.cgst?.toFixed(2)}</td>
                       <td style={{ color: '#34d399' }}>₹{h.sgst?.toFixed(2)}</td>
                       <td>₹{h.cessAmount?.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            {/* DOCS Table */}
+            {activeTab === 'docs' && (
+              <table className="sl-table">
+                <thead>
+                  <tr>
+                    <th>Nature of Document</th>
+                    <th>Sr. No from</th>
+                    <th>Sr. No. To</th>
+                    <th>Total Number</th>
+                    <th>Cancelled</th>
+                    <th>Net Issued</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(!report.docs || report.docs.length === 0) ? (
+                    <tr><td colSpan={6} className="sl-center">No documents found for this period</td></tr>
+                  ) : report.docs.map((row, i) => (
+                    <tr key={i}>
+                      <td className="sl-customer-name">{row.nature}</td>
+                      <td><span className="sl-code">{row.from}</span></td>
+                      <td><span className="sl-code">{row.to}</span></td>
+                      <td>{row.total}</td>
+                      <td>{row.cancelled}</td>
+                      <td>{row.netIssued}</td>
                     </tr>
                   ))}
                 </tbody>

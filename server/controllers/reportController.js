@@ -301,6 +301,23 @@ export const getGSTR1Report = asyncHandler(async (req, res) => {
     return s + (isInter ? (inv.totalTax || 0) : 0);
   }, 0);
 
+  // Calculate DOCS summary
+  const sortedInvoices = [...invoices].sort((a, b) => {
+    return a.invoiceNumber.localeCompare(b.invoiceNumber, undefined, { numeric: true, sensitivity: 'base' });
+  });
+
+  const docs = [];
+  if (sortedInvoices.length > 0) {
+    docs.push({
+      nature: 'Invoices for outward supply',
+      from: sortedInvoices[0].invoiceNumber,
+      to: sortedInvoices[sortedInvoices.length - 1].invoiceNumber,
+      total: sortedInvoices.length,
+      cancelled: 0,
+      netIssued: sortedInvoices.length
+    });
+  }
+
   res.json({
     period         : { month: month || 'All', year: year || 'All' },
     sellerStateCode,
@@ -308,6 +325,7 @@ export const getGSTR1Report = asyncHandler(async (req, res) => {
     b2c,
     hsnB2B         : Object.values(hsnB2B),
     hsnB2C         : Object.values(hsnB2C),
+    docs,
     totals         : {
       totalInvoices  : invoices.length,
       totalTaxable   : invoices.reduce((s, i) => s + (i.subtotal || 0), 0),
