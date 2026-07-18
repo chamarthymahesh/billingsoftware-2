@@ -1,0 +1,345 @@
+import { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import { X, Plus, Trash2 } from 'lucide-react';
+import CreatableSelect from './CreatableSelect';
+import './RecordPurchaseModal.css';
+
+const API = 'http://localhost:5000';
+
+const toProperCase = (str) => {
+  if (typeof str !== 'string') return '';
+  return str.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+};
+
+const GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
+
+const makeItem = () => ({
+  id: Date.now() + Math.random(),
+  productName: '',
+  productId: '',
+  qty: 1,
+  rate: 0,
+  gstRate: 18,
+  isInclusive: false,
+  total: 0,
+});
+
+const calcTotal = (item) => {
+  const qty = parseFloat(item.qty) || 0;
+  const rate = parseFloat(item.rate) || 0;
+  const gst = parseFloat(item.gstRate) || 0;
+  if (item.isInclusive) {
+    const base = (rate / (1 + gst / 100)) * qty;
+    return Number((rate * qty).toFixed(2));
+  }
+  const base = rate * qty;
+  return Number((base + base * (gst / 100)).toFixed(2));
+};
+
+const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, onPurchaseAdded, editingPurchase, onPurchaseUpdated }) => {
+  const isEditMode = Boolean(editingPurchase);
+  const [form, setForm] = useState({
+    targetCompany: editingPurchase?.targetCompany?._id || editingPurchase?.targetCompany || (companies.length > 0 ? companies[0]._id : ''),
+    supplierName: editingPurchase?.supplierName || '',
+    supplierGSTIN: editingPurchase?.supplierGSTIN || '',
+    billNumber: editingPurchase?.billNumber || '',
+    purchaseDate: editingPurchase?.purchaseDate ? new Date(editingPurchase.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    paymentStatus: editingPurchase?.paymentStatus || 'Pending',
+    packagingCharges: editingPurchase?.packagingCharges || 0,
+    transportCharges: editingPurchase?.transportCharges || 0,
+    otherMiscCharges: editingPurchase?.otherMiscCharges || 0,
+  });
+
+  const [items, setItems] = useState(() => {
+    if (editingPurchase?.items?.length > 0) {
+      return editingPurchase.items.map(i => ({
+        id: Date.now() + Math.random(),
+        productName: i.product?.name || i.productName || '',
+        productId: i.product?._id || i.product || '',
+        qty: i.qty,
+        rate: i.rate,
+        gstRate: i.gstRate || 18,
+        isInclusive: i.isInclusive || false,
+        total: i.total || calcTotal(i),
+      }));
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState(false);
+  const tableBottomRef = useRef(null);
+
+  useEffect(() => {
+    if (companies.length > 0 && !form.targetCompany) {
+      setForm(f => ({ ...f, targetCompany: companies[0]._id }));
+    }
+  }, [companies]);
+
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+  const authHeader = { Authorization: `Bearer ${userInfo?.token}` };
+
+  const supplierOptions = [...new Set(suppliers.map(toProperCase))].filter(Boolean);
+  const productOptions = [...new Set(products.map(p => toProperCase(p.name)))].filter(Boolean);
+
+  const handleInput = (e) => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+  };
+
+  const handleSupplierChange = (val) => {
+    setForm(f => ({ ...f, supplierName: toProperCase(val) }));
+  };
+
+  const addItem = () => {
+    const newItems = [...items, makeItem()];
+    setItems(newItems);
+    // Scroll to bottom after render
+    setTimeout(() => {
+      tableBottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
+  };
+
+  const removeItem = (id) => {
+    setItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleItemChange = (id, field, value) => {
+    setItems(prev => prev.map(item => {
+      if (item.id !== id) return item;
+      let updated = { ...item, [field]: value };
+
+      if (field === 'productName') {
+        updated.productName = toProperCase(value);
+        const found = products.find(p => p.name.toLowerCase() === value.toLowerCase());
+        if (found) {
+          updated.productId = found._id;
+          updated.rate = found.purchasePrice || 0;
+          updated.gstRate = found.gstRate || 18;
+        } else {
+          updated.productId = '';
+        }
+      }
+
+      updated.total = calcTotal(updated);
+      return updated;
+    }));
+  };
+
+  const itemsTotal = items.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
+  const extraCharges = (parseFloat(form.packagingCharges) || 0)
+    + (parseFloat(form.transportCharges) || 0)
+    + (parseFloat(form.otherMiscCharges) || 0);
+  const grandTotal = itemsTotal + extraCharges;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (items.length === 0) { alert('Please add at least one item.'); return; }
+    const invalid = items.filter(i => !i.productId);
+    if (invalid.length > 0) {
+      alert(`Product "${invalid[0].productName}" not found. Please create it in Products first.`);
+      return;
+    }
+    setLoading(true);
+    try {
+      const payload = {
+        ...form,
+        supplierName: toProperCase(form.supplierName),
+        items: items.map(i => ({
+          product: i.productId,
+          qty: Number(i.qty),
+          rate: Number(i.rate),
+          gstRate: Number(i.gstRate),
+          isInclusive: Boolean(i.isInclusive),
+          total: Number(i.total),
+        })),
+        itemsTotal: Number(itemsTotal.toFixed(2)),
+        extraCharges: Number(extraCharges.toFixed(2)),
+        grandTotal: Number(grandTotal.toFixed(2)),
+      };
+
+      if (isEditMode) {
+        const { data } = await axios.put(`${API}/api/purchases/${editingPurchase._id}`, payload, {
+          headers: { ...authHeader, 'Content-Type': 'application/json' },
+        });
+        onPurchaseUpdated && onPurchaseUpdated(data);
+      } else {
+        const { data } = await axios.post(`${API}/api/purchases`, payload, {
+          headers: { ...authHeader, 'Content-Type': 'application/json' },
+        });
+        onPurchaseAdded(data);
+      }
+      onClose();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error recording purchase');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="rpm-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="rpm-modal">
+        {/* Header */}
+        <div className="rpm-header">
+          <h2>{isEditMode ? 'Edit Purchase Bill' : 'Record New Purchase Bill'}</h2>
+          <button type="button" className="rpm-close" onClick={onClose}><X size={20} /></button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="rpm-body">
+          {/* Top Info Grid */}
+          <div className="rpm-grid-2">
+            <div className="rpm-field">
+              <label>TARGET COMPANY *</label>
+              <select name="targetCompany" value={form.targetCompany} onChange={handleInput} required>
+                <option value="">-- Choose --</option>
+                {companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="rpm-field">
+              <label>SUPPLIER NAME *</label>
+              <CreatableSelect
+                value={form.supplierName}
+                onChange={handleSupplierChange}
+                options={supplierOptions}
+                placeholder="Search or add supplier..."
+              />
+              <input type="text" required value={form.supplierName} onChange={() => {}}
+                style={{ position: 'absolute', opacity: 0, height: 0, pointerEvents: 'none' }} />
+            </div>
+            <div className="rpm-field">
+              <label>SUPPLIER GSTIN</label>
+              <input type="text" name="supplierGSTIN" value={form.supplierGSTIN} onChange={handleInput} />
+            </div>
+            <div className="rpm-field">
+              <label>BILL NUMBER *</label>
+              <input type="text" name="billNumber" required value={form.billNumber} onChange={handleInput} />
+            </div>
+            <div className="rpm-field">
+              <label>PURCHASE DATE *</label>
+              <input type="date" name="purchaseDate" required value={form.purchaseDate} onChange={handleInput} />
+            </div>
+            <div className="rpm-field">
+              <label>PAYMENT STATUS</label>
+              <select name="paymentStatus" value={form.paymentStatus} onChange={handleInput}>
+                <option>Pending</option>
+                <option>Paid</option>
+                <option>Partial</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Items Section */}
+          <div className="rpm-items-section">
+            <div className="rpm-items-header">
+              <h3>Products in this Bill</h3>
+              <span className="rpm-item-count">{items.length} item{items.length !== 1 ? 's' : ''}</span>
+            </div>
+
+            <div className="rpm-items-table-wrapper">
+              <table className="rpm-items-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '30%' }}>PRODUCT</th>
+                    <th style={{ width: '10%' }}>QTY</th>
+                    <th style={{ width: '15%' }}>RATE (₹)</th>
+                    <th style={{ width: '10%' }}>GST %</th>
+                    <th style={{ width: '8%' }}>INCL?</th>
+                    <th style={{ width: '15%' }}>TOTAL (₹)</th>
+                    <th style={{ width: '5%' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="rpm-empty-items">
+                        No items yet — click "+ Add Item" below
+                      </td>
+                    </tr>
+                  )}
+                  {items.map(item => (
+                    <tr key={item.id}>
+                      <td>
+                        <CreatableSelect
+                          value={item.productName}
+                          onChange={val => handleItemChange(item.id, 'productName', val)}
+                          options={productOptions}
+                          placeholder="Search product..."
+                        />
+                      </td>
+                      <td>
+                        <input type="number" className="rpm-input" min="1" value={item.qty}
+                          onChange={e => handleItemChange(item.id, 'qty', e.target.value)} />
+                      </td>
+                      <td>
+                        <input type="number" className="rpm-input" min="0" step="0.01" value={item.rate}
+                          onChange={e => handleItemChange(item.id, 'rate', e.target.value)} />
+                      </td>
+                      <td>
+                        <select className="rpm-input" value={item.gstRate}
+                          onChange={e => handleItemChange(item.id, 'gstRate', e.target.value)}>
+                          {GST_RATES.map(r => <option key={r} value={r}>{r}%</option>)}
+                        </select>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <input type="checkbox" checked={item.isInclusive}
+                          onChange={e => handleItemChange(item.id, 'isInclusive', e.target.checked)} />
+                      </td>
+                      <td>
+                        <input type="text" className="rpm-input rpm-readonly" readOnly value={item.total} />
+                      </td>
+                      <td>
+                        <button type="button" className="rpm-delete-item" onClick={() => removeItem(item.id)}>
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div ref={tableBottomRef} />
+            </div>
+
+            {/* Add Item button BELOW table — always visible */}
+            <button type="button" className="rpm-add-item-btn" onClick={addItem}>
+              <Plus size={14} /> Add Item
+            </button>
+          </div>
+
+          {/* Charges & Totals */}
+          <div className="rpm-footer-section">
+            <div className="rpm-charges">
+              <div className="rpm-charge-field">
+                <label>PACKAGING (₹)</label>
+                <input type="number" min="0" step="0.01" name="packagingCharges" value={form.packagingCharges} onChange={handleInput} />
+              </div>
+              <div className="rpm-charge-field">
+                <label>TRANSPORT (₹)</label>
+                <input type="number" min="0" step="0.01" name="transportCharges" value={form.transportCharges} onChange={handleInput} />
+              </div>
+              <div className="rpm-charge-field">
+                <label>OTHER (₹)</label>
+                <input type="number" min="0" step="0.01" name="otherMiscCharges" value={form.otherMiscCharges} onChange={handleInput} />
+              </div>
+            </div>
+            <div className="rpm-totals">
+              <div className="rpm-total-row"><span>Items Total:</span><span>₹{itemsTotal.toFixed(2)}</span></div>
+              <div className="rpm-total-row"><span>Extra Charges:</span><span>+₹{extraCharges.toFixed(2)}</span></div>
+              <div className="rpm-total-row rpm-grand-total"><span>Grand Total:</span><span>₹{grandTotal.toFixed(2)}</span></div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="rpm-actions">
+            <button type="button" className="rpm-btn-cancel" onClick={onClose}>Cancel</button>
+            <button type="submit" className="rpm-btn-submit" disabled={loading}>
+              {loading ? 'Saving...' : isEditMode ? 'Update Purchase' : 'Record Purchase'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default RecordPurchaseModal;

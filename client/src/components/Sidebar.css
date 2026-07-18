@@ -1,0 +1,149 @@
+.sidebar {
+  width: 260px;
+  background-color: #0B1120; /* Deep dark background matching the image */
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+/* User Profile Section */
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  margin-bottom: 2rem;
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: white;
+  box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39);
+}
+
+.user-info h3 {
+  font-size: 1rem;
+  margin: 0;
+  color: #F8FAFC;
+  font-weight: 600;
+}
+
+.role-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #64748B;
+  font-size: 0.85rem;
+  margin-top: 0.2rem;
+}
+
+.crown-icon {
+  color: #F59E0B; /* Golden crown */
+}
+
+/* Navigation Menu */
+.nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  color: #94A3B8;
+  text-decoration: none;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #F8FAFC;
+}
+
+.nav-icon {
+  color: #64748B;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover .nav-icon {
+  color: #93C5FD;
+}
+
+/* Active State */
+.nav-link.active {
+  background-color: rgba(37, 99, 235, 0.15); /* Soft blue highlight */
+  color: #60A5FA;
+}
+
+.nav-link.active .nav-icon {
+  color: #60A5FA;
+}
+
+/* Left accent bar for active state */
+.nav-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 15%;
+  height: 70%;
+  width: 4px;
+  background-color: #3B82F6;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Scrollbar styling for sidebar */
+.sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+/* Logout Button */
+.logout-btn {
+  margin-top: auto; /* Pushes the button to the bottom */
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  background-color: rgba(239, 68, 68, 0.1); /* Faint red background */
+  color: #ef4444; /* Red text */
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.logout-btn:hover {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}

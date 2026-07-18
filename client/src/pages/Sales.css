@@ -1,0 +1,238 @@
+.sl-page {
+  padding: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  color: #f8fafc;
+}
+
+.sl-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+}
+
+.sl-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  background: linear-gradient(to right, #ffffff, #cbd5e1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sl-subtitle {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.95rem;
+}
+
+.sl-new-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  transition: all 0.2s;
+}
+
+.sl-new-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.sl-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.sl-stat {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.2s;
+}
+
+.sl-stat:hover {
+  transform: translateY(-3px);
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.sl-stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sl-stat p {
+  margin: 0 0 4px 0;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sl-stat h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+}
+
+.sl-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 16px;
+}
+
+.sl-search {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.sl-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+}
+
+.sl-search input {
+  width: 100%;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 10px 12px 10px 36px;
+  color: white;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.sl-search input:focus {
+  outline: none;
+  border-color: #10b981;
+}
+
+.sl-company-select {
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 10px 16px;
+  color: white;
+  font-size: 0.95rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.sl-company-select:focus {
+  border-color: #10b981;
+}
+
+.sl-table-wrap {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  overflow-x: auto;
+  backdrop-filter: blur(10px);
+}
+
+.sl-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sl-table th {
+  background: rgba(15, 23, 42, 0.6);
+  padding: 14px 20px;
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sl-table td {
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.95rem;
+  color: #cbd5e1;
+  vertical-align: middle;
+}
+
+.sl-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sl-center {
+  text-align: center;
+  padding: 40px !important;
+  color: #64748b;
+}
+
+.sl-code {
+  background: rgba(15, 23, 42, 0.5);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-family: monospace;
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sl-customer-name {
+  font-weight: 600;
+  color: white;
+}
+
+.sl-bold-price {
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.sl-status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.sl-status-paid {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.sl-status-partial {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.sl-status-pending {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}

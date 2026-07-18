@@ -1,0 +1,93 @@
+.profit-report-container {
+  padding: 2rem;
+  background-color: var(--bg-dark);
+  min-height: calc(100vh - 60px);
+  color: var(--text-primary, #ffffff);
+}
+
+.report-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.report-header h2 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  color: #fff;
+}
+
+.report-header p {
+  color: #aaa;
+  font-size: 0.9rem;
+}
+
+.table-wrapper {
+  background: var(--card-bg, #1a1a2e);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.profit-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.profit-table th,
+.profit-table td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  white-space: nowrap;
+}
+
+.profit-table th {
+  background-color: rgba(0, 0, 0, 0.2);
+  color: #ccc;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.profit-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.profit-table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.profit-table td {
+  font-size: 0.9rem;
+  color: #eee;
+}
+
+.final-profit {
+  font-weight: bold;
+  color: #4cd137 !important;
+}
+
+.loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 1.2rem;
+  color: #aaa;
+}
+
+.error-msg {
+  background-color: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(231, 76, 60, 0.2);
+  margin-bottom: 1rem;
+}
+
+.text-center {
+  text-align: center;
+}
