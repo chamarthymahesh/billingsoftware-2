@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, Plus, Trash2, Save, FileText, User, Package, IndianRupee, RefreshCw } from 'lucide-react';
 import CreatableSelect from '../components/CreatableSelect';
@@ -90,6 +90,7 @@ const calcItem = (item) => {
 
 const CreateInvoice = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
   const authHeader = { Authorization: `Bearer ${userInfo?.token}` };
   const isSuperAdmin = userInfo?.role === 'Super Admin';
@@ -130,6 +131,51 @@ const CreateInvoice = () => {
   const [showGlobal, setShowGlobal] = useState(false);
 
   useEffect(() => {
+    if (id) {
+      const fetchInvoiceForEdit = async () => {
+        try {
+          const res = await axios.get(`${API}/api/invoices/${id}`, { headers: authHeader });
+          const inv = res.data;
+          setForm({
+            company: inv.company?._id || inv.company || '',
+            invoiceNumber: inv.invoiceNumber || '',
+            invoiceDate: inv.invoiceDate ? new Date(inv.invoiceDate).toISOString().split('T')[0] : '',
+            gemContractNumber: inv.gemContractNumber || '',
+            paymentStatus: inv.paymentStatus || 'Pending',
+            paymentMethod: inv.paymentMethod || 'Cash',
+            customerName: inv.customerName || '',
+            customerPhone: inv.customerPhone || '',
+            customerGSTIN: inv.customerGSTIN || '',
+            customerState: inv.customerState || '',
+            billingAddress: inv.billingAddress || '',
+            shippingAddress: inv.shippingAddress || '',
+            placeOfSupply: inv.placeOfSupply || '',
+            packagingCharges: inv.packagingCharges || 0,
+            transportCharges: inv.transportCharges || 0,
+            otherCharges: inv.otherCharges || 0,
+            commissionType: inv.commissionType || 'None',
+            commissionValue: inv.commissionValue || 0,
+            notes: inv.notes || '',
+            termsConditions: inv.termsConditions || '',
+          });
+
+          if (inv.items && inv.items.length > 0) {
+            setItems(inv.items.map(item => ({
+              ...item,
+              id: item.id || item._id || Date.now() + Math.random(),
+              product: item.product?._id || item.product || '',
+            })));
+          }
+        } catch (err) {
+          console.error('Error fetching invoice for edit:', err);
+          alert('Failed to load invoice for editing.');
+        }
+      };
+      fetchInvoiceForEdit();
+    }
+  }, [id]);
+
+  useEffect(() => {
     const fetchCustomersAndCompanies = async () => {
       try {
         const companiesUrl = showGlobal ? `${API}/api/companies?global=true` : `${API}/api/companies`;
@@ -152,7 +198,7 @@ const CreateInvoice = () => {
            setForm(f => ({ ...f, company: initialCompanyId }));
         }
 
-        if (initialCompanyId && !form.invoiceNumber) {
+        if (initialCompanyId && !form.invoiceNumber && !id) {
           const numRes = await axios.get(`${API}/api/invoices/next-number?companyId=${initialCompanyId}`, { headers: authHeader });
           setForm(f => ({ ...f, invoiceNumber: numRes.data.invoiceNumber }));
         }
@@ -161,7 +207,7 @@ const CreateInvoice = () => {
       }
     };
     fetchCustomersAndCompanies();
-  }, [showGlobal, form.company]);
+  }, [showGlobal, form.company, id]);
 
   const fetchProducts = async () => {
     try {
@@ -403,12 +449,18 @@ const CreateInvoice = () => {
         commissionAmount: Number(commissionAmount.toFixed(2)),
         grandTotal: Number(grandTotal.toFixed(2)),
       };
-      await axios.post(`${API}/api/invoices`, payload, {
-        headers: { ...authHeader, 'Content-Type': 'application/json' },
-      });
+      if (id) {
+        await axios.put(`${API}/api/invoices/${id}`, payload, {
+          headers: { ...authHeader, 'Content-Type': 'application/json' },
+        });
+      } else {
+        await axios.post(`${API}/api/invoices`, payload, {
+          headers: { ...authHeader, 'Content-Type': 'application/json' },
+        });
+      }
       navigate('/sales');
     } catch (err) {
-      alert(err.response?.data?.message || 'Error creating invoice');
+      alert(err.response?.data?.message || `Error ${id ? 'updating' : 'creating'} invoice`);
     } finally {
       setLoading(false);
     }
@@ -440,7 +492,7 @@ const CreateInvoice = () => {
         <button className="ci-back-btn" onClick={() => navigate('/sales')}>
           <ArrowLeft size={18} /> Back to Sales
         </button>
-        <h1 className="ci-page-title"><FileText size={22} /> Create Invoice</h1>
+        <h1 className="ci-page-title"><FileText size={22} /> {id ? 'Edit Invoice' : 'Create Invoice'}</h1>
         <div className="ci-topbar-actions">
           <button type="button" className="ci-draft-btn" onClick={() => navigate('/sales')}>Discard</button>
           <button type="button" className="ci-submit-btn" disabled={loading} onClick={handleSubmit}>
