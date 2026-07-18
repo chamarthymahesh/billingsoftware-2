@@ -317,8 +317,8 @@
 }
 
 @media print {
-  @page { margin: 10mm; }
-  body { background: white !important; font-size: 0.9rem !important; }
+  @page { margin: 0; size: auto; }
+  body { background: white !important; font-size: 0.9rem !important; margin: 15mm !important; }
   .no-print { display: none !important; }
   .glass-card { background: white !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
   .app-layout { display: block !important; background: white !important; background-color: white !important; min-height: auto !important; }

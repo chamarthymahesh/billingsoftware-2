@@ -93,12 +93,7 @@ const ViewInvoice = () => {
               <span className="meta-label">Date:</span>
               <span className="meta-value">{new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}</span>
             </div>
-            <div className="meta-row">
-              <span className="meta-label">Status:</span>
-              <span className={`status-tag ${getStatusClass(invoice.paymentStatus)}`}>
-                {invoice.paymentStatus}
-              </span>
-            </div>
+
             {invoice.gemContractNumber && (
               <div className="meta-row">
                 <span className="meta-label">GeM Contract:</span>
