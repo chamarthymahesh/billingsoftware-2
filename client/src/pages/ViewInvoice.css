@@ -114,7 +114,7 @@
 .meta-row {
   display: flex;
   justify-content: flex-end;
-  gap: 16px;
+  align-items: center;
   margin-bottom: 8px;
   font-size: 0.95rem;
 }
@@ -123,17 +123,27 @@
   color: #64748b !important;
   font-weight: 600;
   white-space: nowrap;
+  width: 130px;
+  text-align: right;
+  margin-right: 16px;
+}
+
+.meta-value {
+  width: 120px;
+  text-align: left;
 }
 
 .status-tag {
   display: inline-block;
-  margin-top: 16px;
-  padding: 6px 16px;
+  padding: 4px 12px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  text-align: center;
+  width: 120px;
+  box-sizing: border-box;
 }
 
 .status-paid { background: #dcfce7; color: #166534 !important; }
@@ -311,7 +321,7 @@
   body { background: white !important; font-size: 0.9rem !important; }
   .no-print { display: none !important; }
   .glass-card { background: white !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
-  .app-layout { display: block !important; }
+  .app-layout { display: block !important; background: white !important; background-color: white !important; min-height: auto !important; }
   .sidebar { display: none !important; }
   .main-content { padding: 0 !important; margin: 0 !important; width: 100% !important; background: white !important; }
   

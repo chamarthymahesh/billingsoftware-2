@@ -36,7 +36,7 @@ const Sidebar = () => {
     { name: "Products", path: "/products", icon: Package },
     { name: "Reports", path: "/reports", icon: LineChart },
     { name: "Settings", path: "/settings", icon: Settings },
-    { name: "All Invoices", path: "/invoices", icon: Receipt },
+    // { name: "All Invoices", path: "/invoices", icon: Receipt },
     { name: "Global Stock", path: "/global-stock", icon: Layers },
     { name: "Stock Adjustment", path: "/stock-adjustment", icon: Scale },
     { name: "GSTR-1 Report", path: "/gstr1", icon: FileText },
