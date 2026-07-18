@@ -54,7 +54,9 @@ const companySchema = mongoose.Schema(
       addressLayout: { type: String, default: 'side-by-side' },
       signaturePosition: { type: String, default: 'right' },
       termsPosition: { type: String, default: 'left' },
-      tableStyle: { type: String, default: 'bordered' }
+      tableStyle: { type: String, default: 'bordered' },
+      canvasLayout: { type: String, default: '' },
+      canvasLayoutDraft: { type: String, default: '' }
     }
   },
   {

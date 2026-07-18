@@ -8,6 +8,7 @@ import Purchases from './pages/Purchases';
 import Sales from './pages/Sales';
 import CreateInvoice from './pages/CreateInvoice';
 import Settings from './pages/Settings';
+import InvoiceDesigner from './pages/InvoiceDesigner';
 import InvoiceProfitReport from './pages/InvoiceProfitReport';
 import ViewInvoice from './pages/ViewInvoice';
 import GSTR1Report from './pages/GSTR1Report';
@@ -37,6 +38,7 @@ function App() {
           <Route path="sales/view/:id" element={<ViewInvoice />} />
           <Route path="reports" element={<InvoiceProfitReport />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="settings/designer" element={<InvoiceDesigner />} />
           <Route path="invoices" element={<div>All Invoices Content</div>} />
           <Route path="global-stock" element={<GlobalStock />} />
           <Route path="stock-adjustment" element={<StockAdjustment />} />

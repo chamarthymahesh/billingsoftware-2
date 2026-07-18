@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Save, Building2, Image as ImageIcon, CreditCard, FileText } from 'lucide-react';
 import './Settings.css';
@@ -6,6 +7,7 @@ import './Settings.css';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Settings = () => {
+  const navigate = useNavigate();
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
   const authHeader = { Authorization: `Bearer ${userInfo?.token}` };
   
@@ -183,17 +185,26 @@ const Settings = () => {
           <h1 className="settings-title">Business Settings</h1>
           <p className="settings-subtitle">Manage your company profile and billing preferences</p>
         </div>
-        {userInfo.role === 'Super Admin' && (
-          <select 
-            className="settings-company-select"
-            value={selectedCompanyId} 
-            onChange={(e) => handleCompanySwitch(e.target.value)}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button 
+            className="save-btn" 
+            style={{ margin: 0, padding: '8px 16px', background: '#2563eb' }} 
+            onClick={() => navigate('/settings/designer')}
           >
-            {companies.map(c => (
-              <option key={c._id} value={c._id}>{c.name}</option>
-            ))}
-          </select>
-        )}
+            <ImageIcon size={16} /> Open Visual Invoice Designer
+          </button>
+          {userInfo.role === 'Super Admin' && (
+            <select 
+              className="settings-company-select"
+              value={selectedCompanyId} 
+              onChange={(e) => handleCompanySwitch(e.target.value)}
+            >
+              {companies.map(c => (
+                <option key={c._id} value={c._id}>{c.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
 
       <div className="settings-body">

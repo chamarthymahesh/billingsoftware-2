@@ -76,6 +76,34 @@ const ViewInvoice = () => {
   const termsPosition = templates.termsPosition || 'left';
   const tableStyle = templates.tableStyle || 'bordered';
 
+  // WYSIWYG Canvas Config
+  let canvasElements = null;
+  try {
+    if (templates.canvasLayout) {
+      canvasElements = JSON.parse(templates.canvasLayout);
+    }
+  } catch (e) {
+    console.error('Error parsing canvas layout', e);
+  }
+
+  const getCanvasStyles = (key, defaultOrder) => {
+    if (!canvasElements || !canvasElements[key]) {
+      return { order: defaultOrder };
+    }
+    const el = canvasElements[key];
+    if (!el.isVisible) {
+      return { display: 'none' };
+    }
+    return {
+      order: el.order !== undefined ? el.order : defaultOrder,
+      fontSize: el.fontSize,
+      color: el.color,
+      fontWeight: el.fontWeight,
+      fontStyle: el.fontStyle,
+      textAlign: el.alignment
+    };
+  };
+
   return (
     <div className="sl-page">
       <div className="sl-header no-print">
@@ -95,22 +123,44 @@ const ViewInvoice = () => {
         fontFamily: `${fontFamily}, sans-serif`,
         '--primary-color': primaryColor,
         '--secondary-color': secondaryColor,
-        '--secondary-bg-color': `${secondaryColor}15`
+        '--secondary-bg-color': `${secondaryColor}15`,
+        display: 'flex',
+        flexDirection: 'column'
       }}>
-        {/* Invoice Header */}
-        <div className={`invoice-header header-logo-${logoPosition} header-meta-${metaPosition}`}>
-          <div className="company-info" style={{ fontSize: addressFontSize }}>
+        {/* Top accent */}
+        <div style={{ height: '6px', background: primaryColor, borderRadius: '8px 8px 0 0', margin: '-48px -48px 24px -48px' }}></div>
+
+        {/* Company Header Block */}
+        {(!canvasElements || canvasElements.companyInfo?.isVisible) && (
+          <div 
+            className={`company-info header-logo-${logoPosition}`} 
+            style={{ 
+              ...getCanvasStyles('companyInfo', 1), 
+              fontSize: getCanvasStyles('companyInfo', 1).fontSize || addressFontSize,
+              marginBottom: '20px'
+            }}
+          >
             {showLogo && logoImage ? (
-              <img src={logoImage} alt="Company Logo" style={{ maxHeight: '80px', marginBottom: '12px', objectFit: 'contain' }} />
+              <img src={logoImage} alt="Company Logo" style={{ maxHeight: '80px', marginBottom: '12px', objectFit: 'contain', display: 'inline-block' }} />
             ) : (
-              <h1 className="company-name">{invoice.company?.name}</h1>
+              <h1 className="company-name" style={{ color: getCanvasStyles('companyInfo', 1).color || primaryColor }}>{invoice.company?.name}</h1>
             )}
             <p>{invoice.company?.address}</p>
             <p>GSTIN: {invoice.company?.gstin || 'N/A'} | Phone: {invoice.company?.phone}</p>
             {invoice.company?.email && <p>Email: {invoice.company.email}</p>}
           </div>
-          <div className="invoice-meta">
-            <h2 className="invoice-type" style={{ background: `${primaryColor}15` }}>{invoiceTitle}</h2>
+        )}
+
+        {/* Invoice Metadata Block */}
+        {(!canvasElements || canvasElements.invoiceMeta?.isVisible) && (
+          <div 
+            className={`invoice-meta header-meta-${metaPosition}`} 
+            style={{ 
+              ...getCanvasStyles('invoiceMeta', 2),
+              marginBottom: '20px'
+            }}
+          >
+            <h2 className="invoice-type" style={{ background: `${primaryColor}15`, color: getCanvasStyles('invoiceMeta', 2).color || primaryColor }}>{invoiceTitle}</h2>
             <div className="meta-row">
               <span className="meta-label">Invoice #:</span>
               <span className="meta-value">{invoice.invoiceNumber}</span>
@@ -127,27 +177,30 @@ const ViewInvoice = () => {
               </div>
             )}
           </div>
-        </div>
+        )}
 
-        <hr className="divider" />
+        <hr className="divider" style={{ order: getCanvasStyles('companyInfo', 1).order }} />
 
         {/* Billing & Shipping Section */}
-        <div className={`address-container layout-${addressLayout}`}>
-          <div className="bill-to-section">
-            <h3 className="section-title">Bill To:</h3>
-            <div className="customer-info">
-              <h4 className="customer-name">{invoice.customerName}</h4>
-              <p>{invoice.billingAddress}</p>
-              {invoice.customerPhone && <p>Phone: {invoice.customerPhone}</p>}
-              {isGst && invoice.customerGSTIN && (
-                <p><strong>GSTIN: {invoice.customerGSTIN}</strong></p>
-              )}
-              {invoice.customerState && <p>State: {invoice.customerState}</p>}
+        <div className={`address-container layout-${addressLayout}`} style={{ order: getCanvasStyles('billTo', 3).order }}>
+          {(!canvasElements || canvasElements.billTo?.isVisible) && (
+            <div className="bill-to-section" style={getCanvasStyles('billTo', 3)}>
+              <h3 className="section-title" style={{ color: getCanvasStyles('billTo', 3).color || primaryColor }}>Bill To:</h3>
+              <div className="customer-info">
+                <h4 className="customer-name">{invoice.customerName}</h4>
+                <p>{invoice.billingAddress}</p>
+                {invoice.customerPhone && <p>Phone: {invoice.customerPhone}</p>}
+                {isGst && invoice.customerGSTIN && (
+                  <p><strong>GSTIN: {invoice.customerGSTIN}</strong></p>
+                )}
+                {invoice.customerState && <p>State: {invoice.customerState}</p>}
+              </div>
             </div>
-          </div>
-          {invoice.shippingAddress && invoice.shippingAddress !== invoice.billingAddress && (
-            <div className="ship-to-section">
-              <h3 className="section-title">Ship To:</h3>
+          )}
+          
+          {(!canvasElements || canvasElements.shipTo?.isVisible) && invoice.shippingAddress && invoice.shippingAddress !== invoice.billingAddress && (
+            <div className="ship-to-section" style={getCanvasStyles('shipTo', 4)}>
+              <h3 className="section-title" style={{ color: getCanvasStyles('shipTo', 4).color || primaryColor }}>Ship To:</h3>
               <div className="customer-info">
                 <p>{invoice.shippingAddress}</p>
                 <p><strong>Place of Supply: {invoice.placeOfSupply || invoice.customerState}</strong></p>
@@ -157,46 +210,56 @@ const ViewInvoice = () => {
         </div>
 
         {/* Items Table */}
-        <table className={`invoice-table table-style-${tableStyle}`}>
-          <thead>
-            <tr>
-              <th>Description</th>
-              {isGst && <th>HSN</th>}
-              <th>Qty</th>
-              <th>Rate</th>
-              {isGst && <th>GST%</th>}
-              <th className="text-right">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoice.items.map((item, i) => (
-              <tr key={i}>
-                <td>
-                  <div className="item-desc">{item.productName}</div>
-                </td>
-                {isGst && <td>{item.hsnCode || '—'}</td>}
-                <td>{item.qty} {item.unit || 'Pcs'}</td>
-                <td>₹{Number(item.rate).toFixed(2)}</td>
-                {isGst && <td>{item.gstRate || 0}%</td>}
-                <td className="text-right">₹{Number(item.total).toFixed(2)}</td>
+        {(!canvasElements || canvasElements.itemsTable?.isVisible) && (
+          <table 
+            className={`invoice-table table-style-${canvasElements?.itemsTable?.tableStyle || tableStyle}`} 
+            style={getCanvasStyles('itemsTable', 5)}
+          >
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: `2px solid ${primaryColor}` }}>
+                <th>Description</th>
+                {isGst && <th>HSN</th>}
+                <th>Qty</th>
+                <th>Rate</th>
+                {isGst && <th>GST%</th>}
+                <th className="text-right">Amount</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {invoice.items.map((item, i) => (
+                <tr key={i}>
+                  <td>
+                    <div className="item-desc">{item.productName}</div>
+                  </td>
+                  {isGst && <td>{item.hsnCode || '—'}</td>}
+                  <td>{item.qty} {item.unit || 'Pcs'}</td>
+                  <td>₹{Number(item.rate).toFixed(2)}</td>
+                  {isGst && <td>{item.gstRate || 0}%</td>}
+                  <td className="text-right">₹{Number(item.total).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
 
         {/* Summary Section */}
-        <div className={`invoice-summary-container layout-terms-${termsPosition}`}>
-          <div className="invoice-notes">
-            {(invoice.notes || invoice.termsConditions) && (
-              <>
-                <h4 className="notes-title">Notes & Terms</h4>
+        <div 
+          className={`invoice-summary-container layout-terms-${termsPosition}`} 
+          style={{ 
+            order: Math.min(getCanvasStyles('bankDetails', 6).order, getCanvasStyles('terms', 7).order, 7)
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
+            {(!canvasElements || canvasElements.terms?.isVisible) && (invoice.notes || invoice.termsConditions) && (
+              <div className="invoice-notes" style={getCanvasStyles('terms', 7)}>
+                <h4 className="notes-title" style={{ color: getCanvasStyles('terms', 7).color || primaryColor }}>Notes & Terms</h4>
                 <p style={{ whiteSpace: 'pre-line' }}>{invoice.notes || invoice.termsConditions}</p>
-              </>
+              </div>
             )}
             
-            {invoice.company?.bankDetails?.bankName && (
-              <div className="bank-details-info" style={{ marginTop: 20 }}>
-                <h4 className="notes-title">Bank Details (For Payment)</h4>
+            {(!canvasElements || canvasElements.bankDetails?.isVisible) && invoice.company?.bankDetails?.bankName && (
+              <div className="bank-details-info" style={{ ...getCanvasStyles('bankDetails', 6), marginTop: 0 }}>
+                <h4 className="notes-title" style={{ color: getCanvasStyles('bankDetails', 6).color || primaryColor }}>Bank Details (For Payment)</h4>
                 <div className="bank-grid">
                   <p><span>Bank:</span> {invoice.company.bankDetails.bankName}</p>
                   <p><span>A/c No:</span> {invoice.company.bankDetails.accountNumber}</p>
@@ -206,6 +269,7 @@ const ViewInvoice = () => {
               </div>
             )}
           </div>
+
           <div className="summary-details">
             <div className="summary-row">
               <span>Subtotal:</span>
@@ -245,8 +309,11 @@ const ViewInvoice = () => {
         </div>
 
         {/* Footer */}
-        {showSignature && (
-          <div className={`invoice-footer align-sig-${signaturePosition}`}>
+        {showSignature && (!canvasElements || canvasElements.signature?.isVisible) && (
+          <div 
+            className={`invoice-footer align-sig-${canvasElements?.signature?.alignment || signaturePosition}`}
+            style={getCanvasStyles('signature', 8)}
+          >
             <div className="footer-sign">
               {invoice.company?.signatureImage ? (
                 <img 
