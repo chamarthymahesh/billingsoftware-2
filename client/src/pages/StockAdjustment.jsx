@@ -120,10 +120,9 @@ const StockAdjustment = () => {
   const filteredProducts = products.filter(p => {
     const matchesSearch = (p.name || '').toLowerCase().includes(search.toLowerCase()) || 
                           (p.sku || '').toLowerCase().includes(search.toLowerCase());
-    const matchesCompany = selectedCompany ? (p.companyId?._id === selectedCompany) : true;
     const matchesNegative = showNegativeOnly ? (p.stock || 0) < 0 : true;
     
-    return matchesSearch && matchesCompany && matchesNegative;
+    return matchesSearch && matchesNegative;
   });
 
   const negativeCount = products.filter(p => (p.stock || 0) < 0).length;
