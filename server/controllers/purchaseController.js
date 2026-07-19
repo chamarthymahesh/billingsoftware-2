@@ -212,8 +212,6 @@ export const transferStock = async (req, res) => {
     const sourceProduct = await Product.findById(sourceProductId).populate("companyId");
     if (!sourceProduct) return res.status(404).json({ message: "Source product not found" });
 
-
-
     if (sourceProduct.stock < transferQty) {
       return res.status(400).json({ message: "Insufficient stock in source company" });
     }
@@ -256,6 +254,7 @@ export const transferStock = async (req, res) => {
       purchaseDate: new Date(),
       paymentStatus: "Paid",
       itemsTotal: total,
+      extraCharges: 0,
       grandTotal: total,
       items: [
         {
