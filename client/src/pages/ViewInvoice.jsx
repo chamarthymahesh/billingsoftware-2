@@ -301,6 +301,31 @@ const ViewInvoice = () => {
               </>
             )}
 
+            {invoice.transportCharges > 0 && (
+              <div className="summary-row">
+                <span>Transport Charges:</span>
+                <span>₹{invoice.transportCharges.toFixed(2)}</span>
+              </div>
+            )}
+            {invoice.packagingCharges > 0 && (
+              <div className="summary-row">
+                <span>Packaging Charges:</span>
+                <span>₹{invoice.packagingCharges.toFixed(2)}</span>
+              </div>
+            )}
+            {invoice.otherCharges > 0 && (
+              <div className="summary-row">
+                <span>Other Charges:</span>
+                <span>₹{invoice.otherCharges.toFixed(2)}</span>
+              </div>
+            )}
+            {invoice.commissionAmount > 0 && (
+              <div className="summary-row" style={{ color: '#34d399' }}>
+                <span>Commission ({invoice.commissionType}):</span>
+                <span>-₹{invoice.commissionAmount.toFixed(2)}</span>
+              </div>
+            )}
+
             <div className="summary-row grand-total">
               <span>Grand Total:</span>
               <span>₹{(invoice.subtotal + invoice.totalTax).toFixed(2)}</span>

@@ -385,7 +385,7 @@ const CreateInvoice = () => {
     commissionAmount = parseFloat(form.commissionValue) || 0;
   }
 
-  const grandTotal = subtotal + totalTax + extraCharges - commissionAmount;
+  const grandTotal = subtotal + totalTax;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
