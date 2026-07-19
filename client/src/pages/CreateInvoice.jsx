@@ -236,7 +236,7 @@ const CreateInvoice = () => {
   const fetchProducts = async () => {
     if (!form.company) return;
     try {
-      const res = await axios.get(`${API}/api/products?companyId=${form.company}`, { headers: authHeader });
+      const res = await axios.get(`${API}/api/products?companyId=${form.company}&all=true`, { headers: authHeader });
       setProducts(res.data);
     } catch (err) {
       console.error(err);
@@ -442,8 +442,14 @@ const CreateInvoice = () => {
     try {
       // 1. Automatically transfer any products that need it
       console.log("=== AUTO TRANSFER CHECK START ===");
+      console.log("form.company:", form.company);
+      console.log("raw items list:", items.map(i => ({ 
+        name: i.productName, 
+        productCompanyId: i.productCompanyId, 
+        totalPurchased: i.totalPurchased 
+      })));
       const transferItems = items.filter(
-        (i) => i.productCompanyId && String(i.productCompanyId) !== String(form.company) && !(i.totalPurchased > 0),
+        (i) => i.productCompanyId && String(i.productCompanyId) !== String(form.company),
       );
       console.log("Items needing transfer:", transferItems);
 
@@ -513,6 +519,7 @@ const CreateInvoice = () => {
         commissionAmount: Number(commissionAmount.toFixed(2)),
         grandTotal: Number(grandTotal.toFixed(2)),
       };
+      console.log("CreateInvoice final invoice payload:", payload);
       if (id) {
         await axios.put(`${API}/api/invoices/${id}`, payload, {
           headers: { ...authHeader, "Content-Type": "application/json" },
@@ -535,7 +542,7 @@ const CreateInvoice = () => {
     ? products
     : products.filter((p) => {
         const prodCompId = p.companyId?._id || p.companyId;
-        return String(prodCompId) === String(form.company);
+        return String(prodCompId) === String(form.company) || (p.totalPurchased > 0);
       });
 
   const productOptions = displayedProducts.map((p) => {
@@ -800,8 +807,7 @@ const CreateInvoice = () => {
                   {items.map((item) => {
                     const isForeign =
                       item.productCompanyId &&
-                      String(item.productCompanyId) !== String(form.company) &&
-                      !(item.totalPurchased > 0);
+                      String(item.productCompanyId) !== String(form.company);
                     return (
                       <tr key={item.id} style={{ background: isForeign ? "rgba(245, 158, 11, 0.05)" : "transparent" }}>
                         <td>
