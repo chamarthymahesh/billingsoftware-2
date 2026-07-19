@@ -23,12 +23,7 @@ export const getProducts = async (req, res) => {
     let purchases = [];
 
     if (companyId) {
-      // 1. Fetch products owned by this company
-      const ownedProducts = await Product.find({ companyId })
-        .populate('companyId', 'name')
-        .sort({ createdAt: -1 });
-
-      // 2. Fetch sales invoices and purchase invoices for this company
+      // Fetch sales invoices and purchase invoices for this company
       const [invList, purchList] = await Promise.all([
         Invoice.find({ company: companyId }).lean(),
         Purchase.find({ targetCompany: companyId }).lean(),
@@ -36,30 +31,41 @@ export const getProducts = async (req, res) => {
       invoices = invList;
       purchases = purchList;
 
-      // 3. Find unique products billed in this company's invoices
-      const billedProductIds = [];
-      invoices.forEach(inv => {
-        inv.items?.forEach(item => {
-          if (item.product) {
-            billedProductIds.push(item.product.toString());
-          }
+      if (req.query.all === 'true') {
+        products = await Product.find({})
+          .populate('companyId', 'name')
+          .sort({ createdAt: -1 });
+      } else {
+        // Fetch products owned by this company
+        const ownedProducts = await Product.find({ companyId })
+          .populate('companyId', 'name')
+          .sort({ createdAt: -1 });
+
+        // Find unique products billed in this company's invoices
+        const billedProductIds = [];
+        invoices.forEach(inv => {
+          inv.items?.forEach(item => {
+            if (item.product) {
+              billedProductIds.push(item.product.toString());
+            }
+          });
         });
-      });
-      const uniqueBilledProductIds = Array.from(new Set(billedProductIds));
+        const uniqueBilledProductIds = Array.from(new Set(billedProductIds));
 
-      // 4. Fetch the billed products (which might be owned by other companies)
-      const billedProducts = await Product.find({ _id: { $in: uniqueBilledProductIds } })
-        .populate('companyId', 'name');
+        // Fetch the billed products (which might be owned by other companies)
+        const billedProducts = await Product.find({ _id: { $in: uniqueBilledProductIds } })
+          .populate('companyId', 'name');
 
-      // 5. Merge owned products and billed products
-      const allProductsMap = {};
-      ownedProducts.forEach(p => {
-        allProductsMap[p._id.toString()] = p;
-      });
-      billedProducts.forEach(p => {
-        allProductsMap[p._id.toString()] = p;
-      });
-      products = Object.values(allProductsMap);
+        // Merge owned products and billed products
+        const allProductsMap = {};
+        ownedProducts.forEach(p => {
+          allProductsMap[p._id.toString()] = p;
+        });
+        billedProducts.forEach(p => {
+          allProductsMap[p._id.toString()] = p;
+        });
+        products = Object.values(allProductsMap);
+      }
     } else {
       // No companyId filter: default fallback (e.g. Super Admin list)
       products = await Product.find({})

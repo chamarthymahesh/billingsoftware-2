@@ -64,58 +64,22 @@ const createInvoice = async (req, res) => {
       notes, termsConditions,
     } = req.body;
 
+    console.log("createInvoice incoming body:", req.body);
     if (!company || !invoiceNumber || !customerName || !items || items.length === 0) {
+      console.log("Validation failed details:", {
+        company: !company,
+        invoiceNumber: !invoiceNumber,
+        customerName: !customerName,
+        items: !items,
+        itemsLength: items?.length
+      });
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    // Reduce stock and create inter-company purchase invoices for global products
+    // Reduce stock for the invoice items
     for (const item of items) {
       if (item.product) {
-        // Find product to see if it belongs to a different company than the invoice selling company
-        const productObj = await Product.findById(item.product).populate('companyId');
-        if (productObj) {
-          const isForeign = String(productObj.companyId?._id || productObj.companyId) !== String(company);
-          
-          if (isForeign) {
-            // Create a purchase invoice from the owning company to the selling company
-            const Purchase = (await import('../models/Purchase.js')).default;
-            
-            // Calculate totals for purchase
-            const qty = Number(item.qty);
-            const rate = productObj.purchasePrice || Number(item.rate);
-            const gstRate = productObj.gstRate || 18;
-            const itemsTotal = qty * rate;
-            const grandTotal = itemsTotal * (1 + gstRate / 100);
-
-            const purchase = new Purchase({
-              targetCompany: company,
-              supplierName: productObj.companyId.name,
-              supplierGSTIN: productObj.companyId.gstin === 'N/A' ? '' : (productObj.companyId.gstin || ''),
-              billNumber: `AUTO-${invoiceNumber}`,
-              purchaseDate: invoiceDate || new Date(),
-              paymentStatus: 'Paid',
-              items: [{
-                product: productObj._id,
-                qty: qty,
-                rate: rate,
-                gstRate: gstRate,
-                isInclusive: false,
-                total: Number(grandTotal.toFixed(2))
-              }],
-              itemsTotal: Number(itemsTotal.toFixed(2)),
-              extraCharges: 0,
-              grandTotal: Number(grandTotal.toFixed(2))
-            });
-            await purchase.save();
-
-            // Offset the stock increment from the purchase save (since purchase save automatically increments stock).
-            // Net effect: reduce stock of the owning company by qty
-            await Product.findByIdAndUpdate(productObj._id, { $inc: { stock: -Number(item.qty) } });
-          }
-
-          // Decrement stock for the invoice item (standard behavior)
-          await Product.findByIdAndUpdate(item.product, { $inc: { stock: -Number(item.qty) } });
-        }
+        await Product.findByIdAndUpdate(item.product, { $inc: { stock: -Number(item.qty) } });
       }
     }
 

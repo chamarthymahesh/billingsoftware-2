@@ -203,18 +203,31 @@ export const updatePurchaseStatus = async (req, res) => {
 // @route   POST /api/purchases/transfer
 // @access  Private
 export const transferStock = async (req, res) => {
+  console.log("=== STOCK TRANSFER START ===");
   try {
     const { sourceProductId, targetCompanyId, qty } = req.body;
     const transferQty = Number(qty);
+    console.log("Request Body:", { sourceProductId, targetCompanyId, qty, transferQty });
 
     if (!sourceProductId || !targetCompanyId || !transferQty || transferQty <= 0) {
+      console.log("Validation failed: Invalid transfer details");
       return res.status(400).json({ message: "Invalid transfer details" });
     }
 
     const sourceProduct = await Product.findById(sourceProductId).populate("companyId");
-    if (!sourceProduct) return res.status(404).json({ message: "Source product not found" });
+    if (!sourceProduct) {
+      console.log("Error: Source product not found for ID", sourceProductId);
+      return res.status(404).json({ message: "Source product not found" });
+    }
+    console.log("Source Product found:", { 
+      name: sourceProduct.name, 
+      companyId: sourceProduct.companyId?._id || sourceProduct.companyId,
+      companyName: sourceProduct.companyId?.name,
+      stock: sourceProduct.stock 
+    });
 
     if (sourceProduct.stock < transferQty) {
+      console.log("Error: Insufficient stock. Available:", sourceProduct.stock, "Requested:", transferQty);
       return res.status(400).json({ message: "Insufficient stock in source company" });
     }
 
@@ -222,8 +235,10 @@ export const transferStock = async (req, res) => {
     let targetProduct = await Product.findOne({
       name: new RegExp(`^${sourceProduct.name}$`, "i"),
     }).collation({ locale: "en", strength: 2 });
+    console.log("Target product search result:", targetProduct ? targetProduct._id : "Not Found");
 
     if (!targetProduct) {
+      console.log("Target product not found. Creating new target product for company:", targetCompanyId);
       targetProduct = await Product.create({
         companyId: targetCompanyId,
         name: sourceProduct.name,
@@ -235,24 +250,32 @@ export const transferStock = async (req, res) => {
         purchasePrice: sourceProduct.purchasePrice,
         sellingPrice: sourceProduct.sellingPrice,
         mrp: sourceProduct.mrp,
-        stock: 0, // Will be incremented by purchase invoice
+        stock: 0,
       });
+      console.log("Created target product ID:", targetProduct._id);
     }
 
     // Deduct stock from source product
     sourceProduct.stock -= transferQty;
     await sourceProduct.save();
+    console.log("Deducted stock from source product. New stock:", sourceProduct.stock);
 
     const rate = sourceProduct.purchasePrice || 0;
     const taxableAmount = rate * transferQty;
     const taxAmount = taxableAmount * (sourceProduct.gstRate / 100);
     const total = taxableAmount + taxAmount;
+    console.log("Calculated rates:", { rate, taxableAmount, taxAmount, total });
 
     // Fetch the target company
     const targetCompanyObj = await Company.findById(targetCompanyId);
-    if (!targetCompanyObj) return res.status(404).json({ message: "Target company not found" });
+    if (!targetCompanyObj) {
+      console.log("Error: Target company not found for ID", targetCompanyId);
+      return res.status(404).json({ message: "Target company not found" });
+    }
+    console.log("Target Company found:", targetCompanyObj.name);
 
     // Create a Sales Invoice in the source company
+    console.log("Creating Sales Invoice for source company:", sourceProduct.companyId?._id || sourceProduct.companyId);
     const salesInvoice = new Invoice({
       company: sourceProduct.companyId._id,
       invoiceNumber: `TRF-OUT-${Date.now()}`,
@@ -280,9 +303,12 @@ export const transferStock = async (req, res) => {
         }
       ]
     });
-    await salesInvoice.save();
+    console.log("Saving Sales Invoice...");
+    const savedSalesInvoice = await salesInvoice.save();
+    console.log("Sales Invoice saved successfully. ID:", savedSalesInvoice._id);
 
     // Create a Purchase Invoice in the target company
+    console.log("Creating Purchase Invoice for target company:", targetCompanyId);
     const purchase = new Purchase({
       targetCompany: targetCompanyId,
       supplierName: sourceProduct.companyId.name,
@@ -305,15 +331,20 @@ export const transferStock = async (req, res) => {
         },
       ],
     });
-
+    console.log("Saving Purchase Invoice...");
     const savedPurchase = await purchase.save();
+    console.log("Purchase Invoice saved successfully. ID:", savedPurchase._id);
 
     // Increment stock in target product
     targetProduct.stock += transferQty;
     await targetProduct.save();
+    console.log("Incremented stock in target product. New stock:", targetProduct.stock);
 
+    console.log("=== STOCK TRANSFER SUCCESSFUL ===");
     res.status(201).json({ message: "Transfer successful", purchase: savedPurchase, targetProduct });
   } catch (error) {
+    console.error("=== STOCK TRANSFER ERROR ===");
+    console.error(error);
     res.status(500).json({ message: error.message });
   }
 };
