@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Invoice from '../models/Invoice.js';
 import Product from '../models/Product.js';
+import Purchase from '../models/Purchase.js';
 import asyncHandler from 'express-async-handler';
 
 // Get Invoice-wise Profit Report
@@ -12,126 +13,83 @@ export const getInvoiceProfitReport = asyncHandler(async (req, res) => {
     matchStage.company = new mongoose.Types.ObjectId(company);
   }
 
-  // Aggregate invoices with their items and product purchase price
-  const report = await Invoice.aggregate([
-    { $match: matchStage },
-    // Match invoices for the company (assuming req.user.companyId is available, else we can skip if not needed for now, but better to match by company if it exists in the system)
-    {
-      $lookup: {
-        from: 'products',
-        localField: 'items.product',
-        foreignField: '_id',
-        as: 'productDetails'
-      }
-    },
-    // We need to calculate Total SP and Total Cost
-    // Total SP incl GST is already grandTotal of the invoice
-    // We need to sum up Total Cost for all items in the invoice
-    {
-      $addFields: {
-        totalCost: {
-          $reduce: {
-            input: '$items',
-            initialValue: 0,
-            in: {
-              $add: [
-                '$$value',
-                {
-                  // Let's find the product for this item to get purchase price and gst rate
-                  $let: {
-                    vars: {
-                      matchedProduct: {
-                        $arrayElemAt: [
-                          {
-                            $filter: {
-                              input: '$productDetails',
-                              as: 'pd',
-                              cond: { $eq: ['$$pd._id', '$$this.product'] }
-                            }
-                          },
-                          0
-                        ]
-                      }
-                    },
-                    in: {
-                      // Total cost of item = qty * purchasePrice * (1 + gstRate/100)
-                      $multiply: [
-                        '$$this.qty',
-                        { $ifNull: ['$$matchedProduct.purchasePrice', 0] },
-                        { $add: [1, { $divide: [{ $ifNull: ['$$matchedProduct.gstRate', 18] }, 100] }] }
-                      ]
-                    }
-                  }
-                }
-              ]
+  // Fetch all invoices matching company
+  const invoices = await Invoice.find(matchStage).lean();
+  
+  // Fetch all purchases for the relevant company/companies
+  const purchaseMatchStage = {};
+  if (company) {
+    purchaseMatchStage.targetCompany = new mongoose.Types.ObjectId(company);
+  }
+  const purchases = await Purchase.find(purchaseMatchStage).lean();
+
+  // For each invoice, calculate totalCost by looking at the purchases
+  const report = invoices.map(invoice => {
+    let totalCost = 0;
+    const invCompanyId = invoice.company?.toString();
+
+    invoice.items.forEach(item => {
+      const productId = item.product?.toString();
+      
+      // Find purchase items for this product and company
+      const matchingPurchases = [];
+      purchases.forEach(p => {
+        if (p.targetCompany?.toString() === invCompanyId) {
+          p.items.forEach(pi => {
+            if (pi.product?.toString() === productId) {
+              matchingPurchases.push({
+                purchaseDate: p.purchaseDate || p.createdAt,
+                rate: pi.rate,
+                gstRate: pi.gstRate || 0,
+                isInclusive: pi.isInclusive || false
+              });
             }
-          }
+          });
         }
+      });
+
+      // Sort matching purchases by date descending to get the latest purchase price
+      matchingPurchases.sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate));
+
+      let purchaseRate = 0;
+      let gstRate = 18; // Default fallback gst rate
+      if (matchingPurchases.length > 0) {
+        const latestPurchase = matchingPurchases[0];
+        purchaseRate = latestPurchase.rate || 0;
+        gstRate = latestPurchase.gstRate !== undefined ? latestPurchase.gstRate : 18;
       }
-    },
-    // Now calculate Final Profit
-    // Final Profit = ((Total SP - Total Cost) * (1 - GST_Percentage / 100)) - Transport - Commission - Other Charges
-    {
-      $addFields: {
-        grossProfit: { $subtract: ['$grandTotal', '$totalCost'] },
-        gstOnProfitPercentage: 18, // Defaulting to 18% for GST on profit as per standard, could be configurable
-      }
-    },
-    {
-      $addFields: {
-        profitAfterGst: {
-          $subtract: [
-            '$grossProfit',
-            {
-              $multiply: [
-                '$grossProfit',
-                { $divide: ['$gstOnProfitPercentage', 100] }
-              ]
-            }
-          ]
-        }
-      }
-    },
-    {
-      $addFields: {
-        finalProfit: {
-          $subtract: [
-            {
-              $subtract: [
-                {
-                  $subtract: [
-                    '$profitAfterGst',
-                    { $ifNull: ['$transportCharges', 0] }
-                  ]
-                },
-                { $ifNull: ['$commissionAmount', 0] }
-              ]
-            },
-            { $ifNull: ['$otherCharges', 0] }
-          ]
-        }
-      }
-    },
-    {
-      $project: {
-        _id: 1,
-        company: 1,
-        invoiceNumber: 1,
-        invoiceDate: 1,
-        customerName: 1,
-        grandTotal: 1,
-        totalCost: 1,
-        grossProfit: 1,
-        profitAfterGst: 1,
-        transportCharges: 1,
-        commissionAmount: 1,
-        commissionStatus: 1,
-        otherCharges: 1,
-        finalProfit: 1
-      }
-    },
-    { $sort: { invoiceDate: -1 } }
-  ]);
+
+      // If we found a purchase rate, calculate cost: qty * purchaseRate * (1 + gstRate/100)
+      // If no purchase invoice, then purchaseRate is 0 (and the user settles it via stock adjustment)
+      const itemCost = item.qty * purchaseRate * (1 + gstRate / 100);
+      totalCost += itemCost;
+    });
+
+    const grossProfit = (invoice.grandTotal || 0) - totalCost;
+    const gstOnProfitPercentage = 18;
+    const profitAfterGst = grossProfit - (grossProfit * gstOnProfitPercentage / 100);
+    const finalProfit = profitAfterGst - (invoice.transportCharges || 0) - (invoice.commissionAmount || 0) - (invoice.otherCharges || 0);
+
+    return {
+      _id: invoice._id,
+      company: invoice.company,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceDate: invoice.invoiceDate,
+      customerName: invoice.customerName,
+      grandTotal: invoice.grandTotal,
+      totalCost,
+      grossProfit,
+      profitAfterGst,
+      transportCharges: invoice.transportCharges,
+      commissionAmount: invoice.commissionAmount,
+      commissionStatus: invoice.commissionStatus,
+      otherCharges: invoice.otherCharges,
+      finalProfit
+    };
+  });
+
+  // Sort report by date desc
+  report.sort((a, b) => new Date(b.invoiceDate) - new Date(a.invoiceDate));
 
   res.json(report);
 });
