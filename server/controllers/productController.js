@@ -17,48 +17,97 @@ const toProperCase = (str) => {
 export const getProducts = async (req, res) => {
   try {
     const companyId = req.query.companyId;
-    const filter = companyId ? { companyId } : {};
-    const products = await Product.find(filter)
-      .populate('companyId', 'name')
-      .sort({ createdAt: -1 });
 
-    const invoiceFilter = companyId ? { company: companyId } : {};
-    const purchaseFilter = companyId ? { targetCompany: companyId } : {};
+    let products;
+    let invoices = [];
+    let purchases = [];
 
-    const [invoices, purchases] = await Promise.all([
-      Invoice.find(invoiceFilter).lean(),
-      Purchase.find(purchaseFilter).lean(),
-    ]);
+    if (companyId) {
+      // 1. Fetch products owned by this company
+      const ownedProducts = await Product.find({ companyId })
+        .populate('companyId', 'name')
+        .sort({ createdAt: -1 });
 
-    const productsWithAdjustedStock = products.map(prod => {
-      const prodIdStr = prod._id.toString();
-      const prodCompanyIdStr = (prod.companyId?._id || prod.companyId)?.toString();
+      // 2. Fetch sales invoices and purchase invoices for this company
+      const [invList, purchList] = await Promise.all([
+        Invoice.find({ company: companyId }).lean(),
+        Purchase.find({ targetCompany: companyId }).lean(),
+      ]);
+      invoices = invList;
+      purchases = purchList;
 
-      // Check if there are any purchase invoices for this product and company
-      const hasPurchaseInvoice = purchases.some(p => 
-        p.targetCompany?.toString() === prodCompanyIdStr &&
-        p.items?.some(item => item.product?.toString() === prodIdStr)
-      );
-
-      // If there is no purchase invoice, override stock to be -ve of total quantity sold
-      if (!hasPurchaseInvoice) {
-        let totalSold = 0;
-        invoices.forEach(inv => {
-          if (inv.company?.toString() === prodCompanyIdStr) {
-            inv.items?.forEach(item => {
-              if (item.product?.toString() === prodIdStr) {
-                totalSold += Number(item.qty) || 0;
-              }
-            });
+      // 3. Find unique products billed in this company's invoices
+      const billedProductIds = [];
+      invoices.forEach(inv => {
+        inv.items?.forEach(item => {
+          if (item.product) {
+            billedProductIds.push(item.product.toString());
           }
         });
+      });
+      const uniqueBilledProductIds = Array.from(new Set(billedProductIds));
 
-        const doc = prod.toObject ? prod.toObject() : prod;
-        doc.stock = -totalSold;
-        return doc;
-      }
+      // 4. Fetch the billed products (which might be owned by other companies)
+      const billedProducts = await Product.find({ _id: { $in: uniqueBilledProductIds } })
+        .populate('companyId', 'name');
 
-      return prod;
+      // 5. Merge owned products and billed products
+      const allProductsMap = {};
+      ownedProducts.forEach(p => {
+        allProductsMap[p._id.toString()] = p;
+      });
+      billedProducts.forEach(p => {
+        allProductsMap[p._id.toString()] = p;
+      });
+      products = Object.values(allProductsMap);
+    } else {
+      // No companyId filter: default fallback (e.g. Super Admin list)
+      products = await Product.find({})
+        .populate('companyId', 'name')
+        .sort({ createdAt: -1 });
+      
+      const [invList, purchList] = await Promise.all([
+        Invoice.find({}).lean(),
+        Purchase.find({}).lean(),
+      ]);
+      invoices = invList;
+      purchases = purchList;
+    }
+
+    // 6. Calculate stock dynamically for each product for the company
+    const productsWithAdjustedStock = products.map(prod => {
+      const prodIdStr = prod._id.toString();
+      const prodCompanyIdStr = companyId || (prod.companyId?._id || prod.companyId)?.toString();
+
+      // Calculate total quantity purchased by this company
+      let totalPurchased = 0;
+      purchases.forEach(p => {
+        const pCompId = p.targetCompany?.toString();
+        if (pCompId === prodCompanyIdStr) {
+          p.items?.forEach(item => {
+            if (item.product?.toString() === prodIdStr) {
+              totalPurchased += Number(item.qty) || 0;
+            }
+          });
+        }
+      });
+
+      // Calculate total quantity sold by this company
+      let totalSold = 0;
+      invoices.forEach(inv => {
+        const invCompId = inv.company?.toString();
+        if (invCompId === prodCompanyIdStr) {
+          inv.items?.forEach(item => {
+            if (item.product?.toString() === prodIdStr) {
+              totalSold += Number(item.qty) || 0;
+            }
+          });
+        }
+      });
+
+      const doc = prod.toObject ? prod.toObject() : prod;
+      doc.stock = totalPurchased - totalSold;
+      return doc;
     });
 
     res.json(productsWithAdjustedStock);
