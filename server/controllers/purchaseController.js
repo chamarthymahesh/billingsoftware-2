@@ -1,5 +1,7 @@
 import Purchase from "../models/Purchase.js";
 import Product from "../models/Product.js";
+import Company from "../models/Company.js";
+import Invoice from "../models/Invoice.js";
 import mongoose from "mongoose";
 
 // @desc    Create a new purchase bill
@@ -246,11 +248,46 @@ export const transferStock = async (req, res) => {
     const taxAmount = taxableAmount * (sourceProduct.gstRate / 100);
     const total = taxableAmount + taxAmount;
 
+    // Fetch the target company
+    const targetCompanyObj = await Company.findById(targetCompanyId);
+    if (!targetCompanyObj) return res.status(404).json({ message: "Target company not found" });
+
+    // Create a Sales Invoice in the source company
+    const salesInvoice = new Invoice({
+      company: sourceProduct.companyId._id,
+      invoiceNumber: `TRF-OUT-${Date.now()}`,
+      invoiceDate: new Date(),
+      paymentStatus: "Paid",
+      paymentMethod: "Cash",
+      customerName: targetCompanyObj.name,
+      customerGSTIN: targetCompanyObj.gstin || "",
+      customerPhone: targetCompanyObj.phone || "",
+      billingAddress: targetCompanyObj.address || "",
+      subtotal: taxableAmount,
+      totalTax: taxAmount,
+      grandTotal: total,
+      materialDeliveryStatus: "Delivered",
+      items: [
+        {
+          product: sourceProduct._id,
+          productName: sourceProduct.name,
+          qty: transferQty,
+          rate: rate,
+          gstRate: sourceProduct.gstRate,
+          taxableAmount: taxableAmount,
+          taxAmount: taxAmount,
+          total: total,
+        }
+      ]
+    });
+    await salesInvoice.save();
+
     // Create a Purchase Invoice in the target company
     const purchase = new Purchase({
       targetCompany: targetCompanyId,
-      supplierName: sourceProduct.companyId.name + " (Internal Transfer)",
-      billNumber: `TRF-${Date.now()}`,
+      supplierName: sourceProduct.companyId.name,
+      supplierGSTIN: sourceProduct.companyId.gstin || "",
+      billNumber: `TRF-IN-${Date.now()}`,
       purchaseDate: new Date(),
       paymentStatus: "Paid",
       itemsTotal: total,
