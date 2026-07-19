@@ -12,10 +12,40 @@ const InvoiceProfitReport = () => {
   const [activeTab, setActiveTab] = useState('profit'); // 'profit' or 'commission'
   const [selectedInvoices, setSelectedInvoices] = useState([]);
 
+  // Filter States
+  const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+  const isSuperAdmin = userInfo?.role === 'Super Admin';
+  const [filterCustomer, setFilterCustomer] = useState('');
+  const [filterCompany, setFilterCompany] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [companies, setCompanies] = useState([]);
+
+  // Compute Filtered Reports
+  const commissionReportsFiltered = reports
+    .filter(r => (r.commissionAmount > 0 || r.transportCharges > 0))
+    .filter(r => {
+      if (filterCustomer && r.customerName !== filterCustomer) return false;
+      if (filterStatus && (r.commissionStatus || 'Pending') !== filterStatus) return false;
+      if (isSuperAdmin && filterCompany) {
+        const compId = r.company?._id || r.company;
+        if (String(compId) !== String(filterCompany)) return false;
+      }
+      return true;
+    });
+
+  // Extract Unique Customer Names from all commission invoices
+  const uniqueCustomers = Array.from(
+    new Set(
+      reports
+        .filter(r => (r.commissionAmount > 0 || r.transportCharges > 0))
+        .map(r => r.customerName)
+        .filter(Boolean)
+    )
+  ).sort();
+
   const handleSelectAll = (e) => {
-    const commissionReports = reports.filter(r => (r.commissionAmount > 0 || r.transportCharges > 0));
     if (e.target.checked) {
-      setSelectedInvoices(commissionReports.map(r => r._id));
+      setSelectedInvoices(commissionReportsFiltered.map(r => r._id));
     } else {
       setSelectedInvoices([]);
     }
@@ -66,7 +96,7 @@ const InvoiceProfitReport = () => {
   };
 
   useEffect(() => {
-    const fetchReports = async () => {
+    const fetchReportsAndCompanies = async () => {
       try {
         const userInfo = JSON.parse(localStorage.getItem('userInfo'));
         const config = {
@@ -75,8 +105,17 @@ const InvoiceProfitReport = () => {
           },
         };
 
-        const { data } = await axios.get(`${API}/api/reports/invoice-profit`, config);
-        setReports(Array.isArray(data) ? data : []);
+        const [reportsRes, companiesRes] = await Promise.all([
+          axios.get(`${API}/api/reports/invoice-profit`, config),
+          userInfo?.role === 'Super Admin'
+            ? axios.get(`${API}/api/companies`, config)
+            : Promise.resolve({ data: [] })
+        ]);
+
+        setReports(Array.isArray(reportsRes.data) ? reportsRes.data : []);
+        if (userInfo?.role === 'Super Admin') {
+          setCompanies(Array.isArray(companiesRes.data) ? companiesRes.data : []);
+        }
         setLoading(false);
       } catch (err) {
         setError(err.response?.data?.message || err.message);
@@ -84,11 +123,11 @@ const InvoiceProfitReport = () => {
       }
     };
 
-    fetchReports();
+    fetchReportsAndCompanies();
   }, []);
 
   // Prepare data for the commission chart
-  const chartData = reports
+  const chartData = commissionReportsFiltered
     .filter(r => r.commissionAmount > 0)
     .map(r => ({
       name: r.invoiceNumber,
@@ -201,6 +240,125 @@ const InvoiceProfitReport = () => {
           {activeTab === 'commission' && (
             <div className="animate-fade-in">
               
+              {/* Filter Toolbar */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '16px',
+                  alignItems: 'center',
+                  background: 'rgba(30, 41, 59, 0.4)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  padding: '16px 20px',
+                  borderRadius: '12px',
+                  marginBottom: '20px',
+                  flexWrap: 'wrap',
+                }}
+              >
+                {/* Customer Name Filter */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Customer Name</label>
+                  <select
+                    value={filterCustomer}
+                    onChange={(e) => setFilterCustomer(e.target.value)}
+                    style={{
+                      background: '#1e293b',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      color: '#fff',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      minWidth: '180px',
+                    }}
+                  >
+                    <option value="">All Customers</option>
+                    {uniqueCustomers.map((cust, idx) => (
+                      <option key={idx} value={cust}>{cust}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Company Filter (Super Admin only) */}
+                {isSuperAdmin && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Company</label>
+                    <select
+                      value={filterCompany}
+                      onChange={(e) => setFilterCompany(e.target.value)}
+                      style={{
+                        background: '#1e293b',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        color: '#fff',
+                        fontSize: '0.9rem',
+                        outline: 'none',
+                        cursor: 'pointer',
+                        minWidth: '180px',
+                      }}
+                    >
+                      <option value="">All Companies</option>
+                      {companies.map((comp) => (
+                        <option key={comp._id} value={comp._id}>{comp.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Status Filter */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Commission Status</label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    style={{
+                      background: '#1e293b',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      color: '#fff',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      minWidth: '150px',
+                    }}
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Partial">Partial</option>
+                    <option value="Paid">Paid</option>
+                  </select>
+                </div>
+
+                {/* Clear Button */}
+                {(filterCustomer || filterCompany || filterStatus) && (
+                  <button
+                    onClick={() => {
+                      setFilterCustomer('');
+                      setFilterCompany('');
+                      setFilterStatus('');
+                    }}
+                    style={{
+                      alignSelf: 'flex-end',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid rgba(239, 68, 68, 0.2)',
+                      color: '#f87171',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+
               {/* Chart Section */}
               <div style={{ background: 'rgba(15, 23, 42, 0.4)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '20px', marginBottom: '24px', height: '350px' }}>
                 <h3 style={{ margin: '0 0 20px 0', color: '#F8FAFC' }}>Commission Trends</h3>
@@ -239,7 +397,7 @@ const InvoiceProfitReport = () => {
                     <tr>
                       <th style={{ width: '40px', paddingRight: '0' }}>
                         <input type="checkbox" 
-                          checked={selectedInvoices.length > 0 && selectedInvoices.length === reports.filter(r => (r.commissionAmount > 0 || r.transportCharges > 0)).length} 
+                          checked={selectedInvoices.length > 0 && selectedInvoices.length === commissionReportsFiltered.length} 
                           onChange={handleSelectAll} 
                           style={{ cursor: 'pointer', transform: 'scale(1.2)' }} 
                         />
@@ -253,8 +411,8 @@ const InvoiceProfitReport = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {reports.length > 0 ? (
-                      reports.filter(r => (r.commissionAmount > 0 || r.transportCharges > 0)).map((report) => (
+                    {commissionReportsFiltered.length > 0 ? (
+                      commissionReportsFiltered.map((report) => (
                         <tr key={report._id || report.invoiceNumber}>
                           <td style={{ paddingRight: '0' }}>
                             <input type="checkbox" checked={selectedInvoices.includes(report._id)} onChange={() => handleSelectOne(report._id)} style={{ cursor: 'pointer', transform: 'scale(1.2)' }} />

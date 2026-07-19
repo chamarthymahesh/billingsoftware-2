@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Building2, TrendingUp, DollarSign, Activity, ShoppingCart, Truck, Percent } from "lucide-react";
+import { Building2, TrendingUp, DollarSign, Activity, ShoppingCart, Truck, Percent, Search, X } from "lucide-react";
 import "./Sales.css";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -21,6 +21,13 @@ const Dashboard = () => {
   const [activeBreakdownModal, setActiveBreakdownModal] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // New state variables for company customer/vendor breakdown
+  const [allInvoices, setAllInvoices] = useState([]);
+  const [allPurchases, setAllPurchases] = useState([]);
+  const [selectedCompanyForBreakdown, setSelectedCompanyForBreakdown] = useState(null);
+  const [breakdownTab, setBreakdownTab] = useState("customers");
+  const [modalSearch, setModalSearch] = useState("");
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
@@ -32,6 +39,8 @@ const Dashboard = () => {
         ]);
 
         setTotalCompanies(compRes.data.length);
+        setAllInvoices(profitRes.data);
+        setAllPurchases(purchaseRes.data);
 
         // Sum up total profit, sales, transport, and commission from the profit report
         const reportData = profitRes.data;
@@ -74,6 +83,7 @@ const Dashboard = () => {
           const purchases = compPurchases.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
 
           return {
+            companyId: compId,
             companyName: comp.name,
             profit,
             revenue,
@@ -142,6 +152,10 @@ const Dashboard = () => {
   const sortedBreakdown = modalConfig
     ? [...companyBreakdown].sort((a, b) => b[modalConfig.field] - a[modalConfig.field])
     : [];
+
+  const userCompanyRow = !isSuperAdmin
+    ? companyBreakdown.find((c) => String(c.companyId) === String(userInfo?.companyId)) || companyBreakdown[0]
+    : null;
 
   return (
     <div className="sl-page">
@@ -258,41 +272,76 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* {isSuperAdmin && (
-            <div style={{ marginTop: '40px', background: 'rgba(30,41,59,0.7)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <h3 style={{ color: '#F8FAFC', marginBottom: '16px', fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {isSuperAdmin && (
+            <div
+              style={{
+                marginTop: "40px",
+                background: "rgba(30,41,59,0.7)",
+                padding: "24px",
+                borderRadius: "16px",
+                border: "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
+              <h3
+                style={{
+                  color: "#F8FAFC",
+                  marginBottom: "16px",
+                  fontSize: "1.2rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
                 <Building2 size={20} color="#3b82f6" /> Company-Wise Financial Breakdown
               </h3>
               <div className="sl-table-wrap">
                 <table className="sl-table">
                   <thead>
                     <tr>
-                      <th style={{ color: '#94a3b8' }}>Company Name</th>
-                      <th style={{ color: '#94a3b8' }}>Total Profit</th>
-                      <th style={{ color: '#94a3b8' }}>Total Revenue</th>
-                      <th style={{ color: '#94a3b8' }}>Total Purchases</th>
-                      <th style={{ color: '#94a3b8' }}>Total Transport</th>
-                      <th style={{ color: '#94a3b8' }}>Total Commission</th>
+                      <th style={{ color: "#94a3b8" }}>Company Name</th>
+                      <th style={{ color: "#94a3b8" }}>Total Profit</th>
+                      <th style={{ color: "#94a3b8" }}>Total Revenue</th>
+                      <th style={{ color: "#94a3b8" }}>Total Purchases</th>
+                      <th style={{ color: "#94a3b8" }}>Total Transport</th>
+                      <th style={{ color: "#94a3b8" }}>Total Commission</th>
                     </tr>
                   </thead>
                   <tbody>
                     {companyBreakdown.length === 0 ? (
-                      <tr><td colSpan={6} className="sl-center">No company data found</td></tr>
-                    ) : companyBreakdown.map((row, i) => (
-                      <tr key={i}>
-                        <td className="sl-customer-name" style={{ color: '#F8FAFC' }}>{row.companyName}</td>
-                        <td style={{ color: '#10b981', fontWeight: 600 }}>₹{row.profit.toFixed(2)}</td>
-                        <td style={{ color: '#F8FAFC' }}>₹{row.revenue.toFixed(2)}</td>
-                        <td style={{ color: '#F8FAFC' }}>₹{row.purchases.toFixed(2)}</td>
-                        <td style={{ color: '#F8FAFC' }}>₹{row.transport.toFixed(2)}</td>
-                        <td style={{ color: '#F8FAFC' }}>₹{row.commission.toFixed(2)}</td>
+                      <tr>
+                        <td colSpan={6} className="sl-center">
+                          No company data found
+                        </td>
                       </tr>
-                    ))}
+                    ) : (
+                      companyBreakdown.map((row, i) => (
+                        <tr
+                          key={i}
+                          onClick={() => {
+                            setSelectedCompanyForBreakdown(row);
+                            setBreakdownTab("customers");
+                            setModalSearch("");
+                          }}
+                          style={{ cursor: "pointer" }}
+                          title="Click to view Customer & Vendor Breakdown"
+                        >
+                          <td className="sl-customer-name" style={{ color: "#F8FAFC" }}>
+                            {row.companyName}
+                          </td>
+                          <td style={{ color: "#10b981", fontWeight: 600 }}>₹{row.profit.toFixed(2)}</td>
+                          <td style={{ color: "#F8FAFC" }}>₹{row.revenue.toFixed(2)}</td>
+                          <td style={{ color: "#F8FAFC" }}>₹{row.purchases.toFixed(2)}</td>
+                          <td style={{ color: "#F8FAFC" }}>₹{row.transport.toFixed(2)}</td>
+                          <td style={{ color: "#F8FAFC" }}>₹{row.commission.toFixed(2)}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
-          )} */}
+          )}
 
           <div
             style={{
@@ -302,6 +351,10 @@ const Dashboard = () => {
               borderRadius: "16px",
               border: "1px solid rgba(255,255,255,0.05)",
               textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center"
             }}
           >
             <Activity size={48} style={{ color: "#3b82f6", opacity: 0.5, marginBottom: "16px" }} />
@@ -309,6 +362,19 @@ const Dashboard = () => {
             <p style={{ color: "#94a3b8" }}>
               Use the sidebar to navigate to companies, sales, purchases, and reporting.
             </p>
+            {userCompanyRow && (
+              <button
+                className="sl-new-btn"
+                style={{ marginTop: "20px" }}
+                onClick={() => {
+                  setSelectedCompanyForBreakdown(userCompanyRow);
+                  setBreakdownTab("customers");
+                  setModalSearch("");
+                }}
+              >
+                View Customer & Vendor Breakdown
+              </button>
+            )}
           </div>
         </>
       )}
@@ -473,6 +539,296 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Detailed Company Customer/Vendor Breakdown Modal */}
+      {selectedCompanyForBreakdown && (() => {
+        // Filter invoices for this company
+        const compInvoicesForModal = allInvoices.filter((inv) => {
+          const invCompId = inv.company?._id || inv.company;
+          return String(invCompId) === String(selectedCompanyForBreakdown.companyId);
+        });
+
+        // Filter purchases for this company
+        const compPurchasesForModal = allPurchases.filter((p) => {
+          const pCompId = p.targetCompany?._id || p.targetCompany;
+          return String(pCompId) === String(selectedCompanyForBreakdown.companyId);
+        });
+
+        // Calculate Customer Stats
+        const customerStatsMap = {};
+        compInvoicesForModal.forEach((inv) => {
+          const name = inv.customerName || "Unknown Customer";
+          if (!customerStatsMap[name]) {
+            customerStatsMap[name] = {
+              name,
+              revenue: 0,
+              profit: 0,
+              invoiceCount: 0,
+            };
+          }
+          customerStatsMap[name].revenue += inv.grandTotal || 0;
+          customerStatsMap[name].profit += inv.finalProfit || 0;
+          customerStatsMap[name].invoiceCount += 1;
+        });
+
+        // Calculate Vendor Stats
+        const vendorStatsMap = {};
+        compPurchasesForModal.forEach((p) => {
+          const name = p.supplierName || "Unknown Supplier";
+          if (!vendorStatsMap[name]) {
+            vendorStatsMap[name] = {
+              name,
+              purchases: 0,
+              billCount: 0,
+            };
+          }
+          vendorStatsMap[name].purchases += p.grandTotal || 0;
+          vendorStatsMap[name].billCount += 1;
+        });
+
+        const customerStatsList = Object.values(customerStatsMap)
+          .filter(c => c.name.toLowerCase().includes(modalSearch.toLowerCase()))
+          .sort((a, b) => b.profit - a.profit);
+
+        const vendorStatsList = Object.values(vendorStatsMap)
+          .filter(v => v.name.toLowerCase().includes(modalSearch.toLowerCase()))
+          .sort((a, b) => b.purchases - a.purchases);
+
+        return (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(15, 23, 42, 0.85)",
+              backdropFilter: "blur(8px)",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              zIndex: 9999,
+              padding: "20px",
+            }}
+            onClick={() => setSelectedCompanyForBreakdown(null)}
+          >
+            <div
+              style={{
+                background: "#1e293b",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "16px",
+                width: "100%",
+                maxWidth: "800px",
+                maxHeight: "85vh",
+                display: "flex",
+                flexDirection: "column",
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "20px 24px",
+                  borderBottom: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                <div>
+                  <h3
+                    style={{
+                      color: "#F8FAFC",
+                      fontSize: "1.3rem",
+                      fontWeight: 700,
+                      margin: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                    }}
+                  >
+                    <Building2 size={22} color="#3b82f6" /> {selectedCompanyForBreakdown.companyName}
+                  </h3>
+                  <p style={{ margin: "4px 0 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
+                    Detailed Customer & Vendor/Supplier Breakdown
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedCompanyForBreakdown(null)}
+                  style={{
+                    background: "rgba(255,255,255,0.05)",
+                    border: "none",
+                    color: "#94a3b8",
+                    borderRadius: "50%",
+                    width: "32px",
+                    height: "32px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "background 0.2s",
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Tabs and Search Bar */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "16px 24px",
+                  borderBottom: "1px solid rgba(255,255,255,0.05)",
+                  gap: "16px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    onClick={() => { setBreakdownTab("customers"); setModalSearch(""); }}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      border: "none",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontSize: "0.9rem",
+                      background: breakdownTab === "customers" ? "#3b82f6" : "rgba(255,255,255,0.05)",
+                      color: breakdownTab === "customers" ? "white" : "#94a3b8",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    Customers ({Object.keys(customerStatsMap).length})
+                  </button>
+                  <button
+                    onClick={() => { setBreakdownTab("vendors"); setModalSearch(""); }}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      border: "none",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontSize: "0.9rem",
+                      background: breakdownTab === "vendors" ? "#f59e0b" : "rgba(255,255,255,0.05)",
+                      color: breakdownTab === "vendors" ? "white" : "#94a3b8",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    Vendors / Suppliers ({Object.keys(vendorStatsMap).length})
+                  </button>
+                </div>
+
+                <div style={{ position: "relative", minWidth: "220px" }}>
+                  <Search
+                    size={16}
+                    style={{
+                      position: "absolute",
+                      left: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      color: "#64748b",
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder={`Search ${breakdownTab === "customers" ? "customers" : "vendors"}...`}
+                    value={modalSearch}
+                    onChange={(e) => setModalSearch(e.target.value)}
+                    style={{
+                      width: "100%",
+                      background: "rgba(15, 23, 42, 0.4)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "8px",
+                      padding: "8px 12px 8px 36px",
+                      color: "white",
+                      fontSize: "0.9rem",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div style={{ padding: "24px", overflowY: "auto", flex: 1 }}>
+                {breakdownTab === "customers" ? (
+                  <div className="sl-table-wrap">
+                    <table className="sl-table">
+                      <thead>
+                        <tr>
+                          <th>Customer Name</th>
+                          <th>Total Sales (Revenue)</th>
+                          <th>Total Profit</th>
+                          <th>Profit Margin</th>
+                          <th>Invoices</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {customerStatsList.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="sl-center">
+                              No customer statistics found
+                            </td>
+                          </tr>
+                        ) : (
+                          customerStatsList.map((c, idx) => {
+                            const margin = c.revenue > 0 ? (c.profit / c.revenue) * 100 : 0;
+                            return (
+                              <tr key={idx}>
+                                <td style={{ fontWeight: 600, color: "#F8FAFC" }}>{c.name}</td>
+                                <td>₹{c.revenue.toFixed(2)}</td>
+                                <td style={{ color: c.profit >= 0 ? "#10b981" : "#ef4444", fontWeight: 600 }}>
+                                  ₹{c.profit.toFixed(2)}
+                                </td>
+                                <td style={{ color: margin >= 0 ? "#3b82f6" : "#ef4444" }}>
+                                  {margin.toFixed(1)}%
+                                </td>
+                                <td>{c.invoiceCount}</td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="sl-table-wrap">
+                    <table className="sl-table">
+                      <thead>
+                        <tr>
+                          <th>Vendor / Supplier Name</th>
+                          <th>Total Purchases</th>
+                          <th>Purchase Bills</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {vendorStatsList.length === 0 ? (
+                          <tr>
+                            <td colSpan={3} className="sl-center">
+                              No vendor statistics found
+                            </td>
+                          </tr>
+                        ) : (
+                          vendorStatsList.map((v, idx) => (
+                            <tr key={idx}>
+                              <td style={{ fontWeight: 600, color: "#F8FAFC" }}>{v.name}</td>
+                              <td style={{ color: "#f59e0b", fontWeight: 600 }}>₹{v.purchases.toFixed(2)}</td>
+                              <td>{v.billCount}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
