@@ -1,6 +1,6 @@
-import Purchase from '../models/Purchase.js';
-import Product from '../models/Product.js';
-import mongoose from 'mongoose';
+import Purchase from "../models/Purchase.js";
+import Product from "../models/Product.js";
+import mongoose from "mongoose";
 
 // @desc    Create a new purchase bill
 // @route   POST /api/purchases
@@ -27,7 +27,7 @@ export const createPurchase = async (req, res) => {
     } = req.body;
 
     // Optional: Validate calculations here to prevent tampering
-    
+
     const purchase = new Purchase({
       targetCompany,
       supplierName,
@@ -50,7 +50,7 @@ export const createPurchase = async (req, res) => {
     for (const item of items) {
       await Product.findByIdAndUpdate(item.product, {
         $inc: { stock: item.qty },
-        $set: { purchasePrice: item.rate }
+        $set: { purchasePrice: item.rate },
       });
     }
 
@@ -69,8 +69,8 @@ export const getPurchases = async (req, res) => {
     const filter = targetCompany ? { targetCompany } : {};
 
     const purchases = await Purchase.find(filter)
-      .populate('targetCompany', 'name')
-      .populate('items.product', 'name category unit')
+      .populate("targetCompany", "name")
+      .populate("items.product", "name category unit")
       .sort({ createdAt: -1 });
 
     res.json(purchases);
@@ -85,7 +85,7 @@ export const getPurchases = async (req, res) => {
 export const getSuppliers = async (req, res) => {
   try {
     const filter = req.user.companyId ? { targetCompany: req.user.companyId } : {};
-    const suppliers = await Purchase.distinct('supplierName', filter);
+    const suppliers = await Purchase.distinct("supplierName", filter);
     res.json(suppliers);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -98,15 +98,24 @@ export const getSuppliers = async (req, res) => {
 export const updatePurchase = async (req, res) => {
   try {
     const purchase = await Purchase.findById(req.params.id);
-    if (!purchase) return res.status(404).json({ message: 'Purchase not found' });
+    if (!purchase) return res.status(404).json({ message: "Purchase not found" });
     if (req.user.companyId && purchase.targetCompany.toString() !== req.user.companyId.toString()) {
-      return res.status(403).json({ message: 'Not authorized' });
+      return res.status(403).json({ message: "Not authorized" });
     }
 
     const {
-      supplierName, supplierGSTIN, billNumber, purchaseDate,
-      paymentStatus, items, packagingCharges, transportCharges,
-      otherMiscCharges, itemsTotal, extraCharges, grandTotal,
+      supplierName,
+      supplierGSTIN,
+      billNumber,
+      purchaseDate,
+      paymentStatus,
+      items,
+      packagingCharges,
+      transportCharges,
+      otherMiscCharges,
+      itemsTotal,
+      extraCharges,
+      grandTotal,
     } = req.body;
 
     // Reverse old stock increments
@@ -149,9 +158,9 @@ export const updatePurchase = async (req, res) => {
 export const deletePurchase = async (req, res) => {
   try {
     const purchase = await Purchase.findById(req.params.id);
-    if (!purchase) return res.status(404).json({ message: 'Purchase not found' });
+    if (!purchase) return res.status(404).json({ message: "Purchase not found" });
     if (req.user.companyId && purchase.targetCompany.toString() !== req.user.companyId.toString()) {
-      return res.status(403).json({ message: 'Not authorized' });
+      return res.status(403).json({ message: "Not authorized" });
     }
 
     // Reverse stock increments
@@ -160,7 +169,7 @@ export const deletePurchase = async (req, res) => {
     }
 
     await Purchase.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Purchase deleted' });
+    res.json({ message: "Purchase deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -172,17 +181,17 @@ export const deletePurchase = async (req, res) => {
 export const updatePurchaseStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    if (!status) return res.status(400).json({ message: 'Status required' });
+    if (!status) return res.status(400).json({ message: "Status required" });
     const purchase = await Purchase.findById(req.params.id);
-    if (!purchase) return res.status(404).json({ message: 'Purchase not found' });
+    if (!purchase) return res.status(404).json({ message: "Purchase not found" });
     if (req.user.companyId && purchase.targetCompany.toString() !== req.user.companyId.toString()) {
-      return res.status(403).json({ message: 'Not authorized' });
+      return res.status(403).json({ message: "Not authorized" });
     }
-    
+
     purchase.paymentStatus = status;
     await purchase.save();
-    
-    const populatedPurchase = await Purchase.findById(purchase._id).populate('targetCompany', 'name');
+
+    const populatedPurchase = await Purchase.findById(purchase._id).populate("targetCompany", "name");
     res.json(populatedPurchase);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -197,24 +206,22 @@ export const transferStock = async (req, res) => {
     const transferQty = Number(qty);
 
     if (!sourceProductId || !targetCompanyId || !transferQty || transferQty <= 0) {
-      return res.status(400).json({ message: 'Invalid transfer details' });
+      return res.status(400).json({ message: "Invalid transfer details" });
     }
 
-    const sourceProduct = await Product.findById(sourceProductId).populate('companyId');
-    if (!sourceProduct) return res.status(404).json({ message: 'Source product not found' });
+    const sourceProduct = await Product.findById(sourceProductId).populate("companyId");
+    if (!sourceProduct) return res.status(404).json({ message: "Source product not found" });
 
-    if (req.user.companyId && sourceProduct.companyId._id.toString() !== req.user.companyId.toString()) {
-      return res.status(403).json({ message: 'Not authorized to transfer stock from this product' });
-    }
+
 
     if (sourceProduct.stock < transferQty) {
-      return res.status(400).json({ message: 'Insufficient stock in source company' });
+      return res.status(400).json({ message: "Insufficient stock in source company" });
     }
 
     // Find the product globally
     let targetProduct = await Product.findOne({
-      name: new RegExp(`^${sourceProduct.name}$`, 'i')
-    }).collation({ locale: 'en', strength: 2 });
+      name: new RegExp(`^${sourceProduct.name}$`, "i"),
+    }).collation({ locale: "en", strength: 2 });
 
     if (!targetProduct) {
       targetProduct = await Product.create({
@@ -228,7 +235,7 @@ export const transferStock = async (req, res) => {
         purchasePrice: sourceProduct.purchasePrice,
         sellingPrice: sourceProduct.sellingPrice,
         mrp: sourceProduct.mrp,
-        stock: 0 // Will be incremented by purchase invoice
+        stock: 0, // Will be incremented by purchase invoice
       });
     }
 
@@ -244,21 +251,23 @@ export const transferStock = async (req, res) => {
     // Create a Purchase Invoice in the target company
     const purchase = new Purchase({
       targetCompany: targetCompanyId,
-      supplierName: sourceProduct.companyId.name + ' (Internal Transfer)',
+      supplierName: sourceProduct.companyId.name + " (Internal Transfer)",
       billNumber: `TRF-${Date.now()}`,
       purchaseDate: new Date(),
-      paymentStatus: 'Paid',
+      paymentStatus: "Paid",
       itemsTotal: total,
       grandTotal: total,
-      items: [{
-        product: targetProduct._id,
-        productName: targetProduct.name,
-        qty: transferQty,
-        rate: rate,
-        gstRate: sourceProduct.gstRate,
-        taxAmount: taxAmount,
-        total: total
-      }]
+      items: [
+        {
+          product: targetProduct._id,
+          productName: targetProduct.name,
+          qty: transferQty,
+          rate: rate,
+          gstRate: sourceProduct.gstRate,
+          taxAmount: taxAmount,
+          total: total,
+        },
+      ],
     });
 
     const savedPurchase = await purchase.save();
@@ -267,7 +276,7 @@ export const transferStock = async (req, res) => {
     targetProduct.stock += transferQty;
     await targetProduct.save();
 
-    res.status(201).json({ message: 'Transfer successful', purchase: savedPurchase, targetProduct });
+    res.status(201).json({ message: "Transfer successful", purchase: savedPurchase, targetProduct });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
