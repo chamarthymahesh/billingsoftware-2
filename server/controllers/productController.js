@@ -107,6 +107,8 @@ export const getProducts = async (req, res) => {
 
       const doc = prod.toObject ? prod.toObject() : prod;
       doc.stock = totalPurchased - totalSold;
+      doc.totalSold = totalSold;
+      doc.totalPurchased = totalPurchased;
       return doc;
     });
 

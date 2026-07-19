@@ -30,13 +30,11 @@ const StockAdjustment = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [compRes, prodRes, suppRes] = await Promise.all([
+      const [compRes, suppRes] = await Promise.all([
         axios.get(`${API}/api/companies`, { headers: authHeader }),
-        axios.get(`${API}/api/products`, { headers: authHeader }),
         axios.get(`${API}/api/suppliers`, { headers: authHeader })
       ]);
       setCompanies(compRes.data);
-      setProducts(prodRes.data);
       setSuppliers(suppRes.data);
       if (userInfo.role !== 'Super Admin' && compRes.data.length > 0) {
         setSelectedCompany(compRes.data[0]._id);
@@ -51,6 +49,25 @@ const StockAdjustment = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!selectedCompany) {
+      setProducts([]);
+      return;
+    }
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const { data } = await axios.get(`${API}/api/products?companyId=${selectedCompany}`, { headers: authHeader });
+        setProducts(data);
+      } catch (err) {
+        console.error('Error fetching products:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, [selectedCompany]);
 
   const handleStockChange = (productId, value) => {
     setEditValues({
@@ -121,11 +138,12 @@ const StockAdjustment = () => {
     const matchesSearch = (p.name || '').toLowerCase().includes(search.toLowerCase()) || 
                           (p.sku || '').toLowerCase().includes(search.toLowerCase());
     const matchesNegative = showNegativeOnly ? (p.stock || 0) < 0 : true;
+    const isBilled = (p.totalSold || 0) > 0;
     
-    return matchesSearch && matchesNegative;
+    return matchesSearch && matchesNegative && isBilled;
   });
 
-  const negativeCount = products.filter(p => (p.stock || 0) < 0).length;
+  const negativeCount = products.filter(p => (p.stock || 0) < 0 && (p.totalSold || 0) > 0).length;
 
   return (
     <div className="sl-page">
