@@ -1,4 +1,6 @@
 import Product from '../models/Product.js';
+import Invoice from '../models/Invoice.js';
+import Purchase from '../models/Purchase.js';
 
 // Helper: convert any string to Proper Case (Title Case)
 const toProperCase = (str) => {
@@ -19,7 +21,47 @@ export const getProducts = async (req, res) => {
     const products = await Product.find(filter)
       .populate('companyId', 'name')
       .sort({ createdAt: -1 });
-    res.json(products);
+
+    const invoiceFilter = companyId ? { company: companyId } : {};
+    const purchaseFilter = companyId ? { targetCompany: companyId } : {};
+
+    const [invoices, purchases] = await Promise.all([
+      Invoice.find(invoiceFilter).lean(),
+      Purchase.find(purchaseFilter).lean(),
+    ]);
+
+    const productsWithAdjustedStock = products.map(prod => {
+      const prodIdStr = prod._id.toString();
+      const prodCompanyIdStr = (prod.companyId?._id || prod.companyId)?.toString();
+
+      // Check if there are any purchase invoices for this product and company
+      const hasPurchaseInvoice = purchases.some(p => 
+        p.targetCompany?.toString() === prodCompanyIdStr &&
+        p.items?.some(item => item.product?.toString() === prodIdStr)
+      );
+
+      // If there is no purchase invoice, override stock to be -ve of total quantity sold
+      if (!hasPurchaseInvoice) {
+        let totalSold = 0;
+        invoices.forEach(inv => {
+          if (inv.company?.toString() === prodCompanyIdStr) {
+            inv.items?.forEach(item => {
+              if (item.product?.toString() === prodIdStr) {
+                totalSold += Number(item.qty) || 0;
+              }
+            });
+          }
+        });
+
+        const doc = prod.toObject ? prod.toObject() : prod;
+        doc.stock = -totalSold;
+        return doc;
+      }
+
+      return prod;
+    });
+
+    res.json(productsWithAdjustedStock);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
