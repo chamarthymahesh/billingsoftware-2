@@ -1,6 +1,7 @@
 import Invoice from '../models/Invoice.js';
 import Product from '../models/Product.js';
 import { getStateWithCode } from '../utils/stateHelper.js';
+import { syncProductStock } from '../utils/stockSync.js';
 
 // GET /api/invoices?companyId=xxx
 const getInvoices = async (req, res) => {
@@ -76,13 +77,6 @@ const createInvoice = async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    // Reduce stock for the invoice items
-    for (const item of items) {
-      if (item.product) {
-        await Product.findByIdAndUpdate(item.product, { $inc: { stock: -Number(item.qty) } });
-      }
-    }
-
     const pkg = Number(Number(packagingCharges || 0).toFixed(2));
     const trp = Number(Number(transportCharges || 0).toFixed(2));
     const oth = Number(Number(otherCharges || 0).toFixed(2));
@@ -124,6 +118,13 @@ const createInvoice = async (req, res) => {
       termsConditions: termsConditions || '',
     });
 
+    // Recalculate and sync stock for all products involved
+    for (const item of roundedItems) {
+      if (item.product) {
+        await syncProductStock(item.product);
+      }
+    }
+
     res.status(201).json(invoice);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -139,14 +140,17 @@ const deleteInvoice = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to delete this invoice' });
     }
 
-    // Restore stock for deleted items
-    for (const item of invoice.items) {
-      if (item.product) {
-        await Product.findByIdAndUpdate(item.product, { $inc: { stock: Number(item.qty) } });
-      }
-    }
+    const productIds = (invoice.items || [])
+      .map(item => item.product ? item.product.toString() : null)
+      .filter(Boolean);
 
     await Invoice.findByIdAndDelete(req.params.id);
+
+    // Sync stock for all products involved
+    for (const pId of productIds) {
+      await syncProductStock(pId);
+    }
+
     res.json({ message: 'Invoice deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -178,19 +182,10 @@ const updateInvoice = async (req, res) => {
       notes, termsConditions,
     } = req.body;
 
-    // Restore old stock
-    for (const item of existingInvoice.items) {
-      if (item.product) {
-        await Product.findByIdAndUpdate(item.product, { $inc: { stock: Number(item.qty) } });
-      }
-    }
-
-    // Deduct new stock
-    for (const item of items) {
-      if (item.product) {
-        await Product.findByIdAndUpdate(item.product, { $inc: { stock: -Number(item.qty) } });
-      }
-    }
+    // Keep track of old product IDs to sync them later
+    const oldProductIds = (existingInvoice.items || [])
+      .map(item => item.product ? item.product.toString() : null)
+      .filter(Boolean);
 
     const pkg = Number(Number(packagingCharges || 0).toFixed(2));
     const trp = Number(Number(transportCharges || 0).toFixed(2));
@@ -239,6 +234,17 @@ const updateInvoice = async (req, res) => {
     existingInvoice.termsConditions = termsConditions || existingInvoice.termsConditions;
 
     const updatedInvoice = await existingInvoice.save();
+
+    // Recalculate and sync stock for all products involved (old and new)
+    const productIdsToSync = new Set([
+      ...oldProductIds,
+      ...(items || []).map(item => item.product ? item.product.toString() : null).filter(Boolean)
+    ]);
+
+    for (const pId of productIdsToSync) {
+      await syncProductStock(pId);
+    }
+
     res.json(updatedInvoice);
   } catch (err) {
     res.status(500).json({ message: err.message });

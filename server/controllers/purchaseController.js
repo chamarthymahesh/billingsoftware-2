@@ -3,6 +3,7 @@ import Product from "../models/Product.js";
 import Company from "../models/Company.js";
 import Invoice from "../models/Invoice.js";
 import mongoose from "mongoose";
+import { syncProductStock } from "../utils/stockSync.js";
 
 // @desc    Create a new purchase bill
 // @route   POST /api/purchases
@@ -48,12 +49,12 @@ export const createPurchase = async (req, res) => {
 
     const savedPurchase = await purchase.save();
 
-    // Increment product stock and update purchase price for each item in the purchase
+    // Update purchase price and sync stock for each item
     for (const item of items) {
       await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: item.qty },
         $set: { purchasePrice: item.rate },
       });
+      await syncProductStock(item.product);
     }
 
     res.status(201).json(savedPurchase);
@@ -120,15 +121,12 @@ export const updatePurchase = async (req, res) => {
       grandTotal,
     } = req.body;
 
-    // Reverse old stock increments
-    for (const oldItem of purchase.items) {
-      await Product.findByIdAndUpdate(oldItem.product, { $inc: { stock: -oldItem.qty } });
-    }
+    // Keep track of old product IDs to sync them later
+    const oldProductIds = purchase.items.map(item => item.product.toString());
 
-    // Apply new stock increments
+    // Apply new purchase prices
     for (const newItem of items) {
       await Product.findByIdAndUpdate(newItem.product, {
-        $inc: { stock: newItem.qty },
         $set: { purchasePrice: newItem.rate },
       });
     }
@@ -148,6 +146,17 @@ export const updatePurchase = async (req, res) => {
     purchase.grandTotal = grandTotal;
 
     const updated = await purchase.save();
+
+    // Recalculate and sync stock for all products involved
+    const productIdsToSync = new Set([
+      ...oldProductIds,
+      ...items.map(item => item.product.toString())
+    ]);
+
+    for (const pId of productIdsToSync) {
+      await syncProductStock(pId);
+    }
+
     res.json(updated);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -165,12 +174,15 @@ export const deletePurchase = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-    // Reverse stock increments
-    for (const item of purchase.items) {
-      await Product.findByIdAndUpdate(item.product, { $inc: { stock: -item.qty } });
-    }
+    const productIds = purchase.items.map(item => item.product.toString());
 
     await Purchase.findByIdAndDelete(req.params.id);
+
+    // Sync stock for all products involved
+    for (const pId of productIds) {
+      await syncProductStock(pId);
+    }
+
     res.json({ message: "Purchase deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -332,10 +344,7 @@ export const transferStock = async (req, res) => {
     const savedPurchase = await purchase.save();
     console.log("Purchase Invoice saved successfully. ID:", savedPurchase._id);
 
-    // Update global product stock in db (it increments via purchase, decrements via sales: net 0 change, but let's make sure it matches database state)
-    // There is no net change to Product.stock since it is both sold by source and purchased by target, but let's save product.
-    product.stock = (product.stock || 0); // no-op but keeps model clean
-    await product.save();
+    await syncProductStock(product._id);
 
     console.log("=== STOCK TRANSFER SUCCESSFUL ===");
     res.status(201).json({ message: "Transfer successful", purchase: savedPurchase, targetProduct: product });
