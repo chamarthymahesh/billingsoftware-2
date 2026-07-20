@@ -83,14 +83,24 @@ const createInvoice = async (req, res) => {
       }
     }
 
-    const pkg = Number(packagingCharges) || 0;
-    const trp = Number(transportCharges) || 0;
-    const oth = Number(otherCharges) || 0;
-    const comm = Number(commissionAmount) || 0;
-    const sub = Number(subtotal) || 0;
-    const tax = Number(totalTax) || 0;
-    // Recalculate grandTotal server-side to ensure accuracy
-    const calculatedGrandTotal = sub + tax + pkg + trp + oth - comm;
+    const pkg = Number(Number(packagingCharges || 0).toFixed(2));
+    const trp = Number(Number(transportCharges || 0).toFixed(2));
+    const oth = Number(Number(otherCharges || 0).toFixed(2));
+    const comm = Number(Number(commissionAmount || 0).toFixed(2));
+    const sub = Number(Number(subtotal || 0).toFixed(2));
+    const tax = Number(Number(totalTax || 0).toFixed(2));
+    const calculatedGrandTotal = Number((sub + tax + pkg + trp + oth - comm).toFixed(2));
+
+    const roundedItems = (items || []).map(item => ({
+      ...item,
+      qty: Number(item.qty) || 0,
+      rate: Number(Number(item.rate || 0).toFixed(2)),
+      discount: Number(Number(item.discount || 0).toFixed(2)),
+      gstRate: Number(Number(item.gstRate || 0).toFixed(2)),
+      taxableAmount: Number(Number(item.taxableAmount || 0).toFixed(2)),
+      taxAmount: Number(Number(item.taxAmount || 0).toFixed(2)),
+      total: Number(Number(item.total || 0).toFixed(2))
+    }));
 
     const invoice = await Invoice.create({
       company, invoiceNumber, gemContractNumber,
@@ -99,7 +109,7 @@ const createInvoice = async (req, res) => {
       paymentMethod: paymentMethod || 'Cash',
       customerName, customerPhone, customerGSTIN, customerState,
       billingAddress, shippingAddress, placeOfSupply,
-      items,
+      items: roundedItems,
       subtotal: sub,
       totalDiscount: Number(totalDiscount) || 0,
       totalTax: tax,
@@ -182,13 +192,24 @@ const updateInvoice = async (req, res) => {
       }
     }
 
-    const pkg = Number(packagingCharges) || 0;
-    const trp = Number(transportCharges) || 0;
-    const oth = Number(otherCharges) || 0;
-    const comm = Number(commissionAmount) || 0;
-    const sub = Number(subtotal) || 0;
-    const tax = Number(totalTax) || 0;
-    const calculatedGrandTotal = sub + tax + pkg + trp + oth - comm;
+    const pkg = Number(Number(packagingCharges || 0).toFixed(2));
+    const trp = Number(Number(transportCharges || 0).toFixed(2));
+    const oth = Number(Number(otherCharges || 0).toFixed(2));
+    const comm = Number(Number(commissionAmount || 0).toFixed(2));
+    const sub = Number(Number(subtotal || 0).toFixed(2));
+    const tax = Number(Number(totalTax || 0).toFixed(2));
+    const calculatedGrandTotal = Number((sub + tax + pkg + trp + oth - comm).toFixed(2));
+
+    const roundedItems = (items || []).map(item => ({
+      ...item,
+      qty: Number(item.qty) || 0,
+      rate: Number(Number(item.rate || 0).toFixed(2)),
+      discount: Number(Number(item.discount || 0).toFixed(2)),
+      gstRate: Number(Number(item.gstRate || 0).toFixed(2)),
+      taxableAmount: Number(Number(item.taxableAmount || 0).toFixed(2)),
+      taxAmount: Number(Number(item.taxAmount || 0).toFixed(2)),
+      total: Number(Number(item.total || 0).toFixed(2))
+    }));
 
     existingInvoice.company = req.user.companyId || company || existingInvoice.company;
     existingInvoice.invoiceNumber = invoiceNumber || existingInvoice.invoiceNumber;
@@ -203,7 +224,7 @@ const updateInvoice = async (req, res) => {
     existingInvoice.billingAddress = billingAddress || existingInvoice.billingAddress;
     existingInvoice.shippingAddress = shippingAddress || existingInvoice.shippingAddress;
     existingInvoice.placeOfSupply = placeOfSupply || existingInvoice.placeOfSupply;
-    existingInvoice.items = items || existingInvoice.items;
+    existingInvoice.items = roundedItems;
     existingInvoice.subtotal = sub;
     existingInvoice.totalDiscount = Number(totalDiscount) || 0;
     existingInvoice.totalTax = tax;

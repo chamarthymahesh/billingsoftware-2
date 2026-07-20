@@ -81,7 +81,7 @@ const makeItem = () => ({
   productCompanyId: null, // Keep track of which company owns this product
 });
 
-const calcItem = (item) => {
+const calcItem = (item, editingField) => {
   const qty = parseFloat(item.qty) || 0;
   const rate = parseFloat(item.rate) || 0;
   const disc = parseFloat(item.discount) || 0;
@@ -105,7 +105,7 @@ const calcItem = (item) => {
     ...item,
     taxableAmount: Number(taxableAmount.toFixed(2)),
     taxAmount: Number(taxAmount.toFixed(2)),
-    total: Number(total.toFixed(2)),
+    total: editingField === "total" ? item.total : Number(total.toFixed(2)),
   };
 };
 
@@ -320,12 +320,18 @@ const CreateInvoice = () => {
             updated.gstRate = found.gstRate || 18;
             updated.hsnCode = found.hsnCode || "";
             updated.unit = found.unit || "Pcs";
-            updated.productCompanyId = found.companyId?._id || found.companyId; // Keep track of owner
+            updated.companyStocks = found.companyStocks || [];
+            updated.availableStock = found.stock || 0;
+            updated.productCompanyId = null;
             updated.totalPurchased = found.totalPurchased || 0;
+            updated.selectedSourceCompanyId = "";
           } else {
             updated.product = "";
+            updated.companyStocks = [];
+            updated.availableStock = 0;
             updated.productCompanyId = null;
             updated.totalPurchased = 0;
+            updated.selectedSourceCompanyId = "";
           }
         }
 
@@ -350,21 +356,23 @@ const CreateInvoice = () => {
 
             updated.rate = Number(newRate.toFixed(2));
           }
-          updated.total = newTotal;
+          updated.total = value;
         }
 
-        return calcItem(updated);
+        return calcItem(updated, field);
       }),
     );
   };
 
   const handleTransfer = async (item) => {
     if (!form.company) return alert("Select your company first");
+    if (!item.selectedSourceCompanyId) return alert("Select a source company first");
     try {
       const res = await axios.post(
         `${API}/api/purchases/transfer`,
         {
-          sourceProductId: item.product,
+          productId: item.product,
+          sourceCompanyId: item.selectedSourceCompanyId,
           targetCompanyId: form.company,
           qty: item.qty,
         },
@@ -373,19 +381,16 @@ const CreateInvoice = () => {
 
       alert(res.data.message || "Transfer successful!");
 
-      // The target product was created or updated in the target company
       // Refresh products list
       await fetchProducts();
 
-      // Update the line item to point to the NEW product (which belongs to the current company)
+      // Update the line item available stock
       setItems((prev) =>
         prev.map((i) => {
           if (i.id === item.id) {
             return {
               ...i,
-              product: res.data.targetProduct._id,
-              productCompanyId: form.company,
-              totalPurchased: 1,
+              availableStock: (i.availableStock || 0) + Number(item.qty),
             };
           }
           return i;
@@ -440,37 +445,6 @@ const CreateInvoice = () => {
 
     setLoading(true);
     try {
-      // 1. Automatically transfer any products that need it
-      console.log("=== AUTO TRANSFER CHECK START ===");
-      console.log("form.company:", form.company);
-      console.log("raw items list:", items.map(i => ({ 
-        name: i.productName, 
-        productCompanyId: i.productCompanyId, 
-        totalPurchased: i.totalPurchased 
-      })));
-      const transferItems = items.filter(
-        (i) => i.productCompanyId && String(i.productCompanyId) !== String(form.company),
-      );
-      console.log("Items needing transfer:", transferItems);
-
-      for (const item of transferItems) {
-        console.log("Executing transfer for item:", item);
-        const res = await axios.post(
-          `${API}/api/purchases/transfer`,
-          {
-            sourceProductId: item.product,
-            targetCompanyId: form.company,
-            qty: item.qty,
-          },
-          { headers: authHeader },
-        );
-        console.log("Transfer response:", res.data);
-
-        item.product = res.data.targetProduct._id;
-        item.productCompanyId = form.company;
-        item.totalPurchased = 1;
-      }
-      console.log("=== AUTO TRANSFER CHECK END ===");
 
       // 2. Create Customer if doesn't exist
       const isCompany = companies.some((c) => c.name.toLowerCase() === form.customerName.toLowerCase());
@@ -540,18 +514,12 @@ const CreateInvoice = () => {
   // Filter products based on showGlobalProducts toggle
   const displayedProducts = showGlobalProducts
     ? products
-    : products.filter((p) => {
-        const prodCompId = p.companyId?._id || p.companyId;
-        return String(prodCompId) === String(form.company) || (p.totalPurchased > 0);
-      });
+    : products.filter((p) => (p.stock > 0) || (p.totalPurchased > 0));
 
   const productOptions = displayedProducts.map((p) => {
-    const prodCompId = p.companyId?._id || p.companyId;
-    const isGlobal = String(prodCompId) !== String(form.company);
     return {
       value: p.name,
-      label: toProper(p.name),
-      isGlobal: isGlobal,
+      label: `${toProper(p.name)} (Stock: ${p.stock || 0})`,
     };
   });
   const customerOptions = combinedCustomers.map((c) => toProper(c.name));
@@ -805,11 +773,11 @@ const CreateInvoice = () => {
                 </thead>
                 <tbody>
                   {items.map((item) => {
-                    const isForeign =
-                      item.productCompanyId &&
-                      String(item.productCompanyId) !== String(form.company);
+                    const needsTransfer =
+                      item.product &&
+                      Number(item.qty || 0) > Number(item.availableStock || 0);
                     return (
-                      <tr key={item.id} style={{ background: isForeign ? "rgba(245, 158, 11, 0.05)" : "transparent" }}>
+                      <tr key={item.id} style={{ background: needsTransfer ? "rgba(245, 158, 11, 0.05)" : "transparent" }}>
                         <td>
                           <CreatableSelect
                             value={item.productName}
@@ -817,9 +785,57 @@ const CreateInvoice = () => {
                             options={productOptions}
                             placeholder="Search..."
                           />
-                          {isForeign && (
-                            <div style={{ fontSize: "10px", color: "#fbbf24", marginTop: "4px" }}>
-                              Other Company Stock
+                          {needsTransfer && (
+                            <div style={{ fontSize: "10px", color: "#fbbf24", marginTop: "4px", background: "rgba(245, 158, 11, 0.1)", padding: "6px", borderRadius: "4px" }}>
+                              <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+                                Insufficient stock (Available: {item.availableStock || 0})
+                              </div>
+                              {(() => {
+                                const otherCompaniesWithStock = (item.companyStocks || []).filter(
+                                  cs => cs.companyId !== form.company && cs.stock > 0
+                                );
+                                if (otherCompaniesWithStock.length > 0) {
+                                  return (
+                                    <>
+                                      <select
+                                        value={item.selectedSourceCompanyId || ''}
+                                        onChange={(e) => handleItemChange(item.id, 'selectedSourceCompanyId', e.target.value)}
+                                        style={{ display: 'block', width: '100%', marginTop: '4px', padding: '3px', fontSize: '11px', background: '#2d3748', color: '#fff', border: '1px solid #4a5568', borderRadius: '4px' }}
+                                      >
+                                        <option value="">Select source company...</option>
+                                        {otherCompaniesWithStock.map(oc => (
+                                          <option key={oc.companyId} value={oc.companyId}>
+                                            {oc.companyName} ({oc.stock} available)
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleTransfer(item)}
+                                        disabled={!item.selectedSourceCompanyId}
+                                        style={{
+                                          display: 'block',
+                                          width: '100%',
+                                          marginTop: '4px',
+                                          background: '#f59e0b',
+                                          color: '#fff',
+                                          border: 'none',
+                                          borderRadius: '4px',
+                                          padding: '4px',
+                                          fontSize: '11px',
+                                          cursor: 'pointer',
+                                          fontWeight: 'bold',
+                                          opacity: !item.selectedSourceCompanyId ? 0.6 : 1
+                                        }}
+                                      >
+                                        Transfer Stock
+                                      </button>
+                                    </>
+                                  );
+                                } else {
+                                  return <div style={{ color: '#f87171', marginTop: '4px' }}>No other company has stock.</div>;
+                                }
+                              })()}
                             </div>
                           )}
                         </td>
@@ -853,7 +869,7 @@ const CreateInvoice = () => {
                             className="ci-input"
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="any"
                             value={item.rate}
                             onChange={(e) => handleItemChange(item.id, "rate", e.target.value)}
                           />
@@ -863,7 +879,7 @@ const CreateInvoice = () => {
                             className="ci-input"
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="any"
                             value={item.mrp}
                             onChange={(e) => handleItemChange(item.id, "mrp", e.target.value)}
                           />
@@ -874,7 +890,7 @@ const CreateInvoice = () => {
                             type="number"
                             min="0"
                             max="100"
-                            step="0.1"
+                            step="any"
                             value={item.discount}
                             onChange={(e) => handleItemChange(item.id, "discount", e.target.value)}
                           />
@@ -904,14 +920,14 @@ const CreateInvoice = () => {
                             className="ci-input"
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="any"
                             value={item.total}
                             onChange={(e) => handleItemChange(item.id, "total", e.target.value)}
                           />
                         </td>
                         <td>
                           <div style={{ display: "flex", gap: "5px" }}>
-                            {isForeign && (
+                            {needsTransfer && (
                               <span
                                 style={{
                                   display: "inline-flex",
@@ -924,9 +940,9 @@ const CreateInvoice = () => {
                                   fontSize: "10px",
                                   fontWeight: "bold",
                                 }}
-                                title="Belongs to another company - will transfer automatically on save"
+                                title="Needs stock transfer"
                               >
-                                <AlertTriangle size={12} style={{ marginRight: "4px" }} /> Foreign
+                                <AlertTriangle size={12} style={{ marginRight: "4px" }} /> Transfer Need
                               </span>
                             )}
                             <button type="button" className="ci-del-btn" onClick={() => removeItem(item.id)}>
@@ -957,7 +973,7 @@ const CreateInvoice = () => {
                 <input
                   type="number"
                   min="0"
-                  step="0.01"
+                  step="any"
                   name="packagingCharges"
                   value={form.packagingCharges}
                   onChange={handleInput}
@@ -968,7 +984,7 @@ const CreateInvoice = () => {
                 <input
                   type="number"
                   min="0"
-                  step="0.01"
+                  step="any"
                   name="transportCharges"
                   value={form.transportCharges}
                   onChange={handleInput}
@@ -979,7 +995,7 @@ const CreateInvoice = () => {
                 <input
                   type="number"
                   min="0"
-                  step="0.01"
+                  step="any"
                   name="otherCharges"
                   value={form.otherCharges}
                   onChange={handleInput}
@@ -1002,7 +1018,7 @@ const CreateInvoice = () => {
                   <input
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="any"
                     name="commissionValue"
                     value={form.commissionValue}
                     onChange={handleInput}

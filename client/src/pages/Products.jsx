@@ -76,7 +76,6 @@ const Products = () => {
       name:     toProperCase(form.name),
       brand:    toProperCase(form.brand),
       category: toProperCase(form.category),
-      companyId: selectedCompany,
     };
     try {
       if (editProduct) {
@@ -121,9 +120,11 @@ const Products = () => {
           <h1 className="pr-title">Products</h1>
           <p className="pr-subtitle">{products.length} products across your inventory</p>
         </div>
-        <button className="pr-add-btn" onClick={openAdd}>
-          <Plus size={18} /> Add Product
-        </button>
+        {userInfo?.role === 'Super Admin' && (
+          <button className="pr-add-btn" onClick={openAdd}>
+            <Plus size={18} /> Add Product
+          </button>
+        )}
       </div>
 
       {/* Stats */}
@@ -195,7 +196,9 @@ const Products = () => {
                 <td>
                   <div className="pr-actions">
                     <button className="pr-act edit" onClick={() => openEdit(p)}><Edit2 size={15} /></button>
-                    <button className="pr-act delete" onClick={() => handleDelete(p._id)}><Trash2 size={15} /></button>
+                    {userInfo?.role === 'Super Admin' && (
+                      <button className="pr-act delete" onClick={() => handleDelete(p._id)}><Trash2 size={15} /></button>
+                    )}
                   </div>
                 </td>
               </tr>

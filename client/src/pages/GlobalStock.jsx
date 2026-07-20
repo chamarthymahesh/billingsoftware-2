@@ -16,32 +16,42 @@ const GlobalStock = () => {
   const authHeader = { Authorization: `Bearer ${userInfo?.token}` };
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+    const fetchCompanies = async () => {
       try {
-        const [compRes, prodRes] = await Promise.all([
-          axios.get(`${API}/api/companies`, { headers: authHeader }),
-          axios.get(`${API}/api/products`, { headers: authHeader })
-        ]);
+        const compRes = await axios.get(`${API}/api/companies`, { headers: authHeader });
         setCompanies(compRes.data);
-        setProducts(prodRes.data);
         if (userInfo.role !== 'Super Admin' && compRes.data.length > 0) {
           setSelectedCompany(compRes.data[0]._id);
         }
       } catch (err) {
-        console.error('Error fetching data:', err);
+        console.error('Error fetching companies:', err);
+      }
+    };
+    fetchCompanies();
+  }, []);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const url = selectedCompany 
+          ? `${API}/api/products?companyId=${selectedCompany}`
+          : `${API}/api/products`;
+        const prodRes = await axios.get(url, { headers: authHeader });
+        setProducts(prodRes.data);
+      } catch (err) {
+        console.error('Error fetching products:', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
-  }, []);
+    fetchProducts();
+  }, [selectedCompany]);
 
   const filteredProducts = products.filter(p => {
     const matchesSearch = (p.name || '').toLowerCase().includes(search.toLowerCase()) || 
                           (p.sku || '').toLowerCase().includes(search.toLowerCase());
-    const matchesCompany = selectedCompany ? (p.companyId?._id === selectedCompany) : true;
-    return matchesSearch && matchesCompany;
+    return matchesSearch;
   });
 
   const totalStockValue = filteredProducts.reduce((sum, p) => sum + ((p.purchasePrice || 0) * (p.stock || 0)), 0);
@@ -135,7 +145,7 @@ const GlobalStock = () => {
                 <tr key={p._id}>
                   <td style={{ fontWeight: 600 }}>{p.name}</td>
                   <td><span className="sl-code">{p.sku || '-'}</span></td>
-                  <td><span style={{ padding: '4px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', fontSize: '0.8rem' }}>{p.companyId?.name || 'Unknown'}</span></td>
+                  <td><span style={{ padding: '4px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', fontSize: '0.8rem' }}>{selectedCompany ? (companies.find(c => c._id === selectedCompany)?.name || 'Unknown') : 'Universal'}</span></td>
                   <td>{p.category || '-'}</td>
                   <td>₹{(p.purchasePrice || 0).toFixed(2)}</td>
                   <td style={{ fontWeight: 'bold', color: p.stock <= p.minStockLevel ? '#ef4444' : '#10b981' }}>

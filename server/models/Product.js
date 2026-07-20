@@ -5,7 +5,7 @@ const productSchema = mongoose.Schema(
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Company',
-      required: true,
+      required: false,
     },
     name: { type: String, required: true, unique: true },
     brand: { type: String, default: '' },

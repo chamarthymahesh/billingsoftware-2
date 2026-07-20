@@ -43,7 +43,7 @@ export const createCustomer = async (req, res) => {
     const existing = await Customer.findOne({ name: new RegExp(`^${name}$`, 'i') }).collation({ locale: 'en', strength: 2 });
     
     if (existing) {
-      return res.status(400).json({ message: 'Customer with this name already exists' });
+      return res.status(200).json(existing);
     }
 
     const customer = await Customer.create({
