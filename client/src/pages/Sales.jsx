@@ -50,10 +50,16 @@ const Sales = () => {
     fetchSales();
   }, [selectedCompany]);
 
-  const filtered = sales.filter(s =>
-    (s.customerName || '').toLowerCase().includes(search.toLowerCase()) ||
-    (s.invoiceNumber || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = sales.filter(s => {
+    const searchLower = search.toLowerCase();
+    const matchesCustomer = (s.customerName || '').toLowerCase().includes(searchLower);
+    const matchesInvoice = (s.invoiceNumber || '').toLowerCase().includes(searchLower);
+    const matchesGem = (s.gemContractNumber || '').toLowerCase().includes(searchLower);
+    const matchesProduct = s.items?.some(item => 
+      (item.productName || '').toLowerCase().includes(searchLower)
+    );
+    return matchesCustomer || matchesInvoice || matchesGem || matchesProduct;
+  });
 
   const totalSales = sales.reduce((sum, s) => sum + ((s.subtotal || 0) + (s.totalTax || 0)), 0);
   const paidSales = sales.filter(s => s.paymentStatus === 'Paid').reduce((sum, s) => sum + ((s.subtotal || 0) + (s.totalTax || 0)), 0);
@@ -143,7 +149,7 @@ const Sales = () => {
         <div className="sl-search">
           <Search size={16} className="sl-search-icon" />
           <input
-            placeholder="Search by customer or invoice number..."
+            placeholder="Search by customer, invoice #, product, or GeM contract..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />

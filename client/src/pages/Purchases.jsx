@@ -117,10 +117,17 @@ const Purchases = () => {
     setEditingPurchase(null);
   };
 
-  const filteredPurchases = purchases.filter(p => 
-    p.supplierName.toLowerCase().includes(search.toLowerCase()) ||
-    p.billNumber.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredPurchases = purchases.filter(p => {
+    const searchLower = search.toLowerCase();
+    const matchesSupplier = (p.supplierName || '').toLowerCase().includes(searchLower);
+    const matchesBill = (p.billNumber || '').toLowerCase().includes(searchLower);
+    const matchesGem = (p.gemContractNumber || '').toLowerCase().includes(searchLower);
+    const matchesProduct = p.items?.some(item => {
+      const prodName = item.product?.name || item.productName || '';
+      return prodName.toLowerCase().includes(searchLower);
+    });
+    return matchesSupplier || matchesBill || matchesGem || matchesProduct;
+  });
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -183,7 +190,7 @@ const Purchases = () => {
         <div className="pur-search">
           <Search size={16} className="pur-search-icon" />
           <input 
-            placeholder="Search by supplier or bill number..." 
+            placeholder="Search by supplier, bill #, product, or GeM contract..." 
             value={search} 
             onChange={(e) => setSearch(e.target.value)} 
           />

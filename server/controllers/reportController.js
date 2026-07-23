@@ -83,6 +83,7 @@ export const getInvoiceProfitReport = asyncHandler(async (req, res) => {
       transportCharges: invoice.transportCharges,
       commissionAmount: invoice.commissionAmount,
       commissionStatus: invoice.commissionStatus,
+      paymentStatus: invoice.paymentStatus,
       otherCharges: invoice.otherCharges,
       finalProfit
     };

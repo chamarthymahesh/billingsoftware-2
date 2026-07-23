@@ -17,6 +17,7 @@ const Dashboard = () => {
   const [totalPurchases, setTotalPurchases] = useState(0);
   const [totalTransport, setTotalTransport] = useState(0);
   const [totalCommission, setTotalCommission] = useState(0);
+  const [totalPaidCommission, setTotalPaidCommission] = useState(0);
   const [companyBreakdown, setCompanyBreakdown] = useState([]);
   const [activeBreakdownModal, setActiveBreakdownModal] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -48,11 +49,15 @@ const Dashboard = () => {
         const totalS = reportData.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
         const totalT = reportData.reduce((sum, inv) => sum + (inv.transportCharges || 0), 0);
         const totalC = reportData.reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
+        const totalPaidC = reportData
+          .filter(inv => inv.commissionStatus === 'Paid')
+          .reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
 
         setTotalProfit(totalP);
         setTotalSales(totalS);
         setTotalTransport(totalT);
         setTotalCommission(totalC);
+        setTotalPaidCommission(totalPaidC);
 
         // Sum up total purchases
         const purchasesData = purchaseRes.data;
@@ -80,6 +85,9 @@ const Dashboard = () => {
           const revenue = compInvoices.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
           const transport = compInvoices.reduce((sum, inv) => sum + (inv.transportCharges || 0), 0);
           const commission = compInvoices.reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
+          const paidCommission = compInvoices
+            .filter(inv => inv.commissionStatus === 'Paid')
+            .reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
           const purchases = compPurchases.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
 
           return {
@@ -90,6 +98,7 @@ const Dashboard = () => {
             purchases,
             transport,
             commission,
+            paidCommission,
           };
         });
 
@@ -267,7 +276,12 @@ const Dashboard = () => {
               </div>
               <div>
                 <p>{isSuperAdmin ? "TOTAL COMMISSION (ALL) ↗" : "TOTAL COMMISSION"}</p>
-                <h3>₹{totalCommission.toFixed(2)}</h3>
+                <h3 style={{ fontSize: '1.4rem' }}>₹{totalCommission.toFixed(2)}</h3>
+                <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px' }}>
+                  <span style={{ color: '#10b981' }}>Paid: ₹{totalPaidCommission.toFixed(2)}</span>
+                  <span>|</span>
+                  <span style={{ color: '#ef4444' }}>Pending: ₹{(totalCommission - totalPaidCommission).toFixed(2)}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -504,6 +518,12 @@ const Dashboard = () => {
                         <span style={{ color: "#F8FAFC", fontWeight: 600 }}>{item.companyName}</span>
                         <span style={{ color: modalConfig.color, fontWeight: 700 }}>₹{val.toFixed(2)}</span>
                       </div>
+                      {activeBreakdownModal === 'commission' && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#94a3b8', marginTop: '-4px', marginBottom: '8px' }}>
+                          <span style={{ color: '#10b981' }}>Paid: ₹{(item.paidCommission || 0).toFixed(2)}</span>
+                          <span style={{ color: '#ef4444' }}>Pending: ₹{(val - (item.paidCommission || 0)).toFixed(2)}</span>
+                        </div>
+                      )}
 
                       {/* Visual Progress bar */}
                       <div

@@ -18,6 +18,7 @@ const InvoiceProfitReport = () => {
   const [filterCustomer, setFilterCustomer] = useState('');
   const [filterCompany, setFilterCompany] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterInvoicePayment, setFilterInvoicePayment] = useState('');
   const [companies, setCompanies] = useState([]);
 
   // Compute Filtered Reports
@@ -26,12 +27,20 @@ const InvoiceProfitReport = () => {
     .filter(r => {
       if (filterCustomer && r.customerName !== filterCustomer) return false;
       if (filterStatus && (r.commissionStatus || 'Pending') !== filterStatus) return false;
+      if (filterInvoicePayment && (r.paymentStatus || 'Pending') !== filterInvoicePayment) return false;
       if (isSuperAdmin && filterCompany) {
         const compId = r.company?._id || r.company;
         if (String(compId) !== String(filterCompany)) return false;
       }
       return true;
     });
+
+  // Compute Totals for Summary
+  const totalCommission = commissionReportsFiltered.reduce((sum, r) => sum + (r.commissionAmount || 0), 0);
+  const totalPaidCommission = commissionReportsFiltered
+    .filter(r => r.commissionStatus === 'Paid')
+    .reduce((sum, r) => sum + (r.commissionAmount || 0), 0);
+  const totalTransport = commissionReportsFiltered.reduce((sum, r) => sum + (r.transportCharges || 0), 0);
 
   // Extract Unique Customer Names from all commission invoices
   const uniqueCustomers = Array.from(
@@ -306,12 +315,12 @@ const InvoiceProfitReport = () => {
                   </div>
                 )}
 
-                {/* Status Filter */}
+                {/* Invoice Payment Status Filter */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Commission Status</label>
+                  <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Invoice Payment Status</label>
                   <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
+                    value={filterInvoicePayment}
+                    onChange={(e) => setFilterInvoicePayment(e.target.value)}
                     style={{
                       background: '#1e293b',
                       border: '1px solid rgba(255,255,255,0.1)',
@@ -321,23 +330,24 @@ const InvoiceProfitReport = () => {
                       fontSize: '0.9rem',
                       outline: 'none',
                       cursor: 'pointer',
-                      minWidth: '150px',
+                      minWidth: '180px',
                     }}
                   >
-                    <option value="">All Statuses</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Partial">Partial</option>
+                    <option value="">All (Paid & Unpaid)</option>
                     <option value="Paid">Paid</option>
+                    <option value="Pending">Unpaid (Pending)</option>
+                    <option value="Partial">Partial</option>
                   </select>
                 </div>
 
                 {/* Clear Button */}
-                {(filterCustomer || filterCompany || filterStatus) && (
+                {(filterCustomer || filterCompany || filterStatus || filterInvoicePayment) && (
                   <button
                     onClick={() => {
                       setFilterCustomer('');
                       setFilterCompany('');
                       setFilterStatus('');
+                      setFilterInvoicePayment('');
                     }}
                     style={{
                       alignSelf: 'flex-end',
@@ -357,6 +367,25 @@ const InvoiceProfitReport = () => {
                     Clear Filters
                   </button>
                 )}
+              </div>
+
+              {/* Summary Cards */}
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 250px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '16px', borderRadius: '12px' }}>
+                  <div style={{ color: '#10b981', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Commission</div>
+                  <div style={{ color: '#fff', fontSize: '1.8rem', fontWeight: 700, marginTop: '4px' }}>₹{totalCommission.toFixed(2)}</div>
+                  <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px' }}>
+                    <span style={{ color: '#10b981' }}>Paid: ₹{totalPaidCommission.toFixed(2)}</span>
+                    <span>|</span>
+                    <span style={{ color: '#ef4444' }}>Pending: ₹{(totalCommission - totalPaidCommission).toFixed(2)}</span>
+                  </div>
+                  <div style={{ color: '#64748b', fontSize: '0.7rem', marginTop: '6px' }}>Based on {commissionReportsFiltered.length} filtered bills</div>
+                </div>
+                <div style={{ flex: '1 1 250px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '16px', borderRadius: '12px' }}>
+                  <div style={{ color: '#3b82f6', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Transport Charges</div>
+                  <div style={{ color: '#fff', fontSize: '1.8rem', fontWeight: 700, marginTop: '4px' }}>₹{totalTransport.toFixed(2)}</div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '4px' }}>Based on {commissionReportsFiltered.length} filtered bills</div>
+                </div>
               </div>
 
               {/* Chart Section */}
@@ -405,6 +434,7 @@ const InvoiceProfitReport = () => {
                       <th>Date</th>
                       <th>Invoice #</th>
                       <th>Customer Name</th>
+                      <th style={{ textAlign: 'center' }}>Invoice Payment</th>
                       <th>Transport Charges</th>
                       <th style={{ textAlign: 'right' }}>Commission Amount</th>
                       <th style={{ textAlign: 'center' }}>Status</th>
@@ -420,6 +450,15 @@ const InvoiceProfitReport = () => {
                           <td>{new Date(report.invoiceDate).toLocaleDateString()}</td>
                           <td><span className="sl-code">{report.invoiceNumber}</span></td>
                           <td style={{ fontWeight: 600 }}>{report.customerName}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span style={{
+                              padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold',
+                              backgroundColor: report.paymentStatus === 'Paid' ? 'rgba(16,185,129,0.2)' : report.paymentStatus === 'Partial' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)',
+                              color: report.paymentStatus === 'Paid' ? '#10b981' : report.paymentStatus === 'Partial' ? '#f59e0b' : '#ef4444',
+                            }}>
+                              {report.paymentStatus || 'Pending'}
+                            </span>
+                          </td>
                           <td>₹{report.transportCharges?.toFixed(2) || '0.00'}</td>
                           <td style={{ textAlign: 'right', color: '#10b981', fontWeight: 'bold' }}>
                             ₹{report.commissionAmount?.toFixed(2) || '0.00'}
@@ -440,11 +479,12 @@ const InvoiceProfitReport = () => {
                               <option value="Paid">Paid</option>
                             </select>
                           </td>
+                          <tr style={{ display: 'none' }}></tr>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="7" className="sl-center">No commission records found</td>
+                        <td colSpan="8" className="sl-center">No commission records found</td>
                       </tr>
                     )}
                   </tbody>
