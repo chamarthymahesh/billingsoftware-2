@@ -95,7 +95,7 @@ const createInvoice = async (req, res) => {
     const sub = Number(Number(subtotal || 0).toFixed(2));
     const tax = Number(Number(totalTax || 0).toFixed(2));
     const adj = Number(Number(adjustment || 0).toFixed(2));
-    const calculatedGrandTotal = Number((sub + tax - adj).toFixed(2));
+    const calculatedGrandTotal = Math.round(sub + tax - adj);
 
     const roundedItems = (items || []).map(item => ({
       ...item,
@@ -219,7 +219,7 @@ const updateInvoice = async (req, res) => {
     const sub = Number(Number(subtotal || 0).toFixed(2));
     const tax = Number(Number(totalTax || 0).toFixed(2));
     const adj = Number(Number(adjustment || 0).toFixed(2));
-    const calculatedGrandTotal = Number((sub + tax - adj).toFixed(2));
+    const calculatedGrandTotal = Math.round(sub + tax - adj);
 
     const roundedItems = (items || []).map(item => ({
       ...item,

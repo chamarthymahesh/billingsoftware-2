@@ -335,7 +335,7 @@ const ViewInvoice = () => {
 
             <div className="summary-row grand-total">
               <span>Grand Total:</span>
-              <span>₹{(invoice.grandTotal || (invoice.subtotal + invoice.totalTax)).toFixed(2)}</span>
+              <span>₹{(invoice.grandTotal !== undefined ? invoice.grandTotal : Math.round(invoice.subtotal + invoice.totalTax)).toFixed(2)}</span>
             </div>
           </div>
         </div>

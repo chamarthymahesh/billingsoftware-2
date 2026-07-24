@@ -465,7 +465,7 @@ const CreateInvoice = () => {
     commissionAmount = parseFloat(form.commissionValue) || 0;
   }
 
-  const grandTotal = subtotal + totalTax - (parseFloat(form.adjustment) || 0);
+  const grandTotal = Math.round(subtotal + totalTax - (parseFloat(form.adjustment) || 0));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -529,7 +529,7 @@ const CreateInvoice = () => {
         commissionValue: Number(form.commissionValue) || 0,
         commissionAmount: Number(commissionAmount.toFixed(2)),
         adjustment: Number(form.adjustment) || 0,
-        grandTotal: Number(grandTotal.toFixed(2)),
+        grandTotal: grandTotal,
       };
       console.log("CreateInvoice final invoice payload:", payload);
       if (id) {
