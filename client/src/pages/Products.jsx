@@ -120,7 +120,7 @@ const Products = () => {
           <h1 className="pr-title">Products</h1>
           <p className="pr-subtitle">{products.length} products across your inventory</p>
         </div>
-        {userInfo?.role === 'Super Admin' && (
+        {(userInfo?.role === 'Super Admin' || userInfo?.role === 'Company Admin') && (
           <button className="pr-add-btn" onClick={openAdd}>
             <Plus size={18} /> Add Product
           </button>
@@ -196,7 +196,7 @@ const Products = () => {
                 <td>
                   <div className="pr-actions">
                     <button className="pr-act edit" onClick={() => openEdit(p)}><Edit2 size={15} /></button>
-                    {userInfo?.role === 'Super Admin' && (
+                    {(userInfo?.role === 'Super Admin' || userInfo?.role === 'Company Admin') && (
                       <button className="pr-act delete" onClick={() => handleDelete(p._id)}><Trash2 size={15} /></button>
                     )}
                   </div>
