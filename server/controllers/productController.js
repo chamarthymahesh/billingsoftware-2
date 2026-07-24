@@ -21,7 +21,6 @@ export const getProducts = async (req, res) => {
 
     // Fetch all products (universal)
     const products = await Product.find({})
-      .populate('companyId', 'name')
       .sort({ createdAt: -1 });
 
     // Fetch all companies, invoices, and purchases to calculate stocks

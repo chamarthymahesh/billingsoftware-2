@@ -2,11 +2,6 @@ import mongoose from 'mongoose';
 
 const productSchema = mongoose.Schema(
   {
-    companyId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Company',
-      required: false,
-    },
     name: { type: String, required: true, unique: true },
     brand: { type: String, default: '' },
     productType: { type: String, enum: ['Physical Good', 'Service'], default: 'Physical Good' },
