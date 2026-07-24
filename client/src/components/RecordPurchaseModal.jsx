@@ -365,13 +365,13 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
               <table className="rpm-items-table">
                 <thead>
                   <tr>
-                    <th style={{ width: '30%' }}>PRODUCT</th>
-                    <th style={{ width: '10%' }}>QTY</th>
-                    <th style={{ width: '15%' }}>RATE (₹)</th>
-                    <th style={{ width: '10%' }}>GST %</th>
-                    <th style={{ width: '8%' }}>INCL?</th>
-                    <th style={{ width: '15%' }}>TOTAL (₹)</th>
-                    <th style={{ width: '5%' }}></th>
+                    <th style={{ minWidth: '220px' }}>PRODUCT</th>
+                    <th style={{ width: '90px' }}>QTY</th>
+                    <th style={{ width: '120px' }}>RATE (₹)</th>
+                    <th style={{ width: '80px' }}>GST %</th>
+                    <th style={{ width: '70px', textAlign: 'center' }}>INCL?</th>
+                    <th style={{ width: '130px' }}>TOTAL (₹)</th>
+                    <th style={{ width: '50px' }}></th>
                   </tr>
                 </thead>
                 <tbody>

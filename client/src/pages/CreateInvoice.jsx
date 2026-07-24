@@ -758,17 +758,17 @@ const CreateInvoice = () => {
               <table className="ci-items-table">
                 <thead>
                   <tr>
-                    <th style={{ width: "22%" }}>PRODUCT</th>
-                    <th style={{ width: "8%" }}>HSN</th>
-                    <th style={{ width: "6%" }}>UNIT</th>
-                    <th style={{ width: "6%" }}>QTY</th>
-                    <th style={{ width: "10%" }}>RATE (₹)</th>
-                    <th style={{ width: "8%" }}>MRP (₹)</th>
-                    <th style={{ width: "6%" }}>DISC %</th>
-                    <th style={{ width: "6%" }}>GST %</th>
-                    <th style={{ width: "5%" }}>INCL?</th>
-                    <th style={{ width: "10%" }}>TOTAL (₹)</th>
-                    <th style={{ width: "8%" }}>ACTION</th>
+                    <th style={{ minWidth: "220px" }}>PRODUCT</th>
+                    <th style={{ width: "100px" }}>HSN</th>
+                    <th style={{ width: "80px" }}>UNIT</th>
+                    <th style={{ width: "90px" }}>QTY</th>
+                    <th style={{ width: "120px" }}>RATE (₹)</th>
+                    <th style={{ width: "110px" }}>MRP (₹)</th>
+                    <th style={{ width: "80px" }}>DISC %</th>
+                    <th style={{ width: "80px" }}>GST %</th>
+                    <th style={{ width: "70px", textAlign: "center" }}>INCL?</th>
+                    <th style={{ width: "130px" }}>TOTAL (₹)</th>
+                    <th style={{ width: "70px" }}>ACTION</th>
                   </tr>
                 </thead>
                 <tbody>

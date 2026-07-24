@@ -146,9 +146,8 @@
 .rpm-items-table-wrapper {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: auto;
   max-height: 260px;
-  overflow-y: auto;
 }
 
 .rpm-add-item-btn {
@@ -176,6 +175,7 @@
 .rpm-items-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 800px;
 }
 
 .rpm-items-table th {
