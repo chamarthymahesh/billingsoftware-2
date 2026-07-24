@@ -762,7 +762,7 @@ const CreateInvoice = () => {
           </div>
 
           {/* ── Section: Line Items ── */}
-          <div className="ci-section">
+          <div className="ci-section" style={{ position: "relative", zIndex: 10 }}>
             <div
               className="ci-section-title"
               style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
