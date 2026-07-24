@@ -45,6 +45,7 @@ const invoiceSchema = mongoose.Schema(
     commissionValue: { type: Number, default: 0 },
     commissionAmount: { type: Number, default: 0 },
     commissionStatus: { type: String, enum: ['Paid', 'Pending', 'Partial'], default: 'Pending' },
+    adjustment: { type: Number, default: 0 },
     grandTotal: { type: Number, default: 0 },
     // Notes
     notes: { type: String, default: '' },

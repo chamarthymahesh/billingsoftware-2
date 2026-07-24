@@ -326,9 +326,16 @@ const ViewInvoice = () => {
               </div>
             )}
 
+            {invoice.adjustment > 0 && (
+              <div className="summary-row">
+                <span>Adjustment:</span>
+                <span>-₹{invoice.adjustment.toFixed(2)}</span>
+              </div>
+            )}
+
             <div className="summary-row grand-total">
               <span>Grand Total:</span>
-              <span>₹{(invoice.subtotal + invoice.totalTax).toFixed(2)}</span>
+              <span>₹{(invoice.grandTotal || (invoice.subtotal + invoice.totalTax)).toFixed(2)}</span>
             </div>
           </div>
         </div>

@@ -48,6 +48,7 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
     packagingCharges: prepopulatedData?.packagingCharges || editingPurchase?.packagingCharges || 0,
     transportCharges: prepopulatedData?.transportCharges || editingPurchase?.transportCharges || 0,
     otherMiscCharges: prepopulatedData?.otherMiscCharges || editingPurchase?.otherMiscCharges || 0,
+    adjustment: prepopulatedData?.adjustment || editingPurchase?.adjustment || 0,
   });
 
   const [items, setItems] = useState(() => {
@@ -92,6 +93,7 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
         packagingCharges: prepopulatedData?.packagingCharges || editingPurchase?.packagingCharges || 0,
         transportCharges: prepopulatedData?.transportCharges || editingPurchase?.transportCharges || 0,
         otherMiscCharges: prepopulatedData?.otherMiscCharges || editingPurchase?.otherMiscCharges || 0,
+        adjustment: prepopulatedData?.adjustment || editingPurchase?.adjustment || 0,
       });
 
       if (prepopulatedData?.items?.length > 0) {
@@ -233,7 +235,7 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
   const extraCharges = (parseFloat(form.packagingCharges) || 0)
     + (parseFloat(form.transportCharges) || 0)
     + (parseFloat(form.otherMiscCharges) || 0);
-  const grandTotal = itemsTotal + extraCharges;
+  const grandTotal = itemsTotal - (parseFloat(form.adjustment) || 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -258,6 +260,7 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
         })),
         itemsTotal: Number(itemsTotal.toFixed(2)),
         extraCharges: Number(extraCharges.toFixed(2)),
+        adjustment: Number(form.adjustment) || 0,
         grandTotal: Number(grandTotal.toFixed(2)),
       };
 
@@ -450,6 +453,19 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
             <div className="rpm-totals">
               <div className="rpm-total-row"><span>Items Total:</span><span>₹{itemsTotal.toFixed(2)}</span></div>
               <div className="rpm-total-row"><span>Extra Charges:</span><span>+₹{extraCharges.toFixed(2)}</span></div>
+              <div className="rpm-total-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                <span>Adjustment (₹):</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  name="adjustment"
+                  className="rpm-input"
+                  style={{ width: '120px', textAlign: 'right', padding: '4px 8px' }}
+                  value={form.adjustment}
+                  onChange={handleInput}
+                />
+              </div>
               <div className="rpm-total-row rpm-grand-total"><span>Grand Total:</span><span>₹{grandTotal.toFixed(2)}</span></div>
             </div>
           </div>

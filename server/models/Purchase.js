@@ -26,6 +26,7 @@ const purchaseSchema = mongoose.Schema({
   otherMiscCharges: { type: Number, default: 0 },
   itemsTotal: { type: Number, required: true },
   extraCharges: { type: Number, required: true },
+  adjustment: { type: Number, default: 0 },
   grandTotal: { type: Number, required: true },
 }, { timestamps: true });
 

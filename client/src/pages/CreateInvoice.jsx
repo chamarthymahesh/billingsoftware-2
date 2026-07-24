@@ -142,6 +142,7 @@ const CreateInvoice = () => {
     otherCharges: 0,
     commissionType: "None", // 'None', 'Percentage', 'Fixed'
     commissionValue: 0,
+    adjustment: 0,
     notes: "",
     termsConditions: "Goods once sold will not be taken back.\nAll disputes subject to local jurisdiction.",
   });
@@ -176,6 +177,7 @@ const CreateInvoice = () => {
             otherCharges: inv.otherCharges || 0,
             commissionType: inv.commissionType || "None",
             commissionValue: inv.commissionValue || 0,
+            adjustment: inv.adjustment || 0,
             notes: inv.notes || "",
             termsConditions: inv.termsConditions || "",
           });
@@ -428,7 +430,7 @@ const CreateInvoice = () => {
     commissionAmount = parseFloat(form.commissionValue) || 0;
   }
 
-  const grandTotal = subtotal + totalTax;
+  const grandTotal = subtotal + totalTax - (parseFloat(form.adjustment) || 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -491,6 +493,7 @@ const CreateInvoice = () => {
         commissionType: form.commissionType,
         commissionValue: Number(form.commissionValue) || 0,
         commissionAmount: Number(commissionAmount.toFixed(2)),
+        adjustment: Number(form.adjustment) || 0,
         grandTotal: Number(grandTotal.toFixed(2)),
       };
       console.log("CreateInvoice final invoice payload:", payload);
@@ -1088,6 +1091,22 @@ const CreateInvoice = () => {
               </div>
 
               <div className="ci-summary-bottom-right">
+                <div className="ci-summary-row">
+                  <span>Total (Products + Tax)</span>
+                  <span>₹{(subtotal + totalTax).toFixed(2)}</span>
+                </div>
+                <div className="ci-summary-row" style={{ alignItems: 'center', gap: '10px' }}>
+                  <span>Adjustment (₹)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="ci-input"
+                    style={{ width: '120px', textAlign: 'right', padding: '4px 8px' }}
+                    value={form.adjustment}
+                    onChange={(e) => setForm({ ...form, adjustment: e.target.value })}
+                  />
+                </div>
                 <div className="ci-summary-divider" />
                 <div className="ci-summary-grand">
                   <span>Grand Total</span>

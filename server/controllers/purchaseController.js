@@ -26,6 +26,7 @@ export const createPurchase = async (req, res) => {
       otherMiscCharges,
       itemsTotal,
       extraCharges,
+      adjustment,
       grandTotal,
     } = req.body;
 
@@ -44,6 +45,7 @@ export const createPurchase = async (req, res) => {
       otherMiscCharges,
       itemsTotal,
       extraCharges,
+      adjustment: Number(adjustment) || 0,
       grandTotal,
     });
 
@@ -118,6 +120,7 @@ export const updatePurchase = async (req, res) => {
       otherMiscCharges,
       itemsTotal,
       extraCharges,
+      adjustment,
       grandTotal,
     } = req.body;
 
@@ -143,6 +146,7 @@ export const updatePurchase = async (req, res) => {
     purchase.otherMiscCharges = otherMiscCharges;
     purchase.itemsTotal = itemsTotal;
     purchase.extraCharges = extraCharges;
+    purchase.adjustment = Number(adjustment) || 0;
     purchase.grandTotal = grandTotal;
 
     const updated = await purchase.save();

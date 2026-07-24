@@ -136,6 +136,12 @@ const PurchaseViewModal = ({ purchase, onClose }) => {
               <span>+₹{purchase.extraCharges?.toFixed(2)}</span>
             </div>
           )}
+          {purchase.adjustment > 0 && (
+            <div className="pvm-total-row">
+              <span>Adjustment</span>
+              <span>-₹{purchase.adjustment?.toFixed(2)}</span>
+            </div>
+          )}
           <div className="pvm-total-row pvm-grand-total">
             <span>Grand Total</span>
             <span>₹{purchase.grandTotal?.toFixed(2)}</span>

@@ -61,6 +61,7 @@ const createInvoice = async (req, res) => {
       items, subtotal, totalDiscount, totalTax,
       packagingCharges, transportCharges, otherCharges,
       commissionType, commissionValue, commissionAmount,
+      adjustment,
       grandTotal,
       notes, termsConditions,
     } = req.body;
@@ -83,7 +84,8 @@ const createInvoice = async (req, res) => {
     const comm = Number(Number(commissionAmount || 0).toFixed(2));
     const sub = Number(Number(subtotal || 0).toFixed(2));
     const tax = Number(Number(totalTax || 0).toFixed(2));
-    const calculatedGrandTotal = Number((sub + tax + pkg + trp + oth - comm).toFixed(2));
+    const adj = Number(Number(adjustment || 0).toFixed(2));
+    const calculatedGrandTotal = Number((sub + tax - adj).toFixed(2));
 
     const roundedItems = (items || []).map(item => ({
       ...item,
@@ -113,6 +115,7 @@ const createInvoice = async (req, res) => {
       commissionType: commissionType || 'None',
       commissionValue: Number(commissionValue) || 0,
       commissionAmount: comm,
+      adjustment: adj,
       grandTotal: calculatedGrandTotal,
       notes: notes || '',
       termsConditions: termsConditions || '',
@@ -179,6 +182,7 @@ const updateInvoice = async (req, res) => {
       items, subtotal, totalDiscount, totalTax,
       packagingCharges, transportCharges, otherCharges,
       commissionType, commissionValue, commissionAmount,
+      adjustment,
       notes, termsConditions,
     } = req.body;
 
@@ -193,7 +197,8 @@ const updateInvoice = async (req, res) => {
     const comm = Number(Number(commissionAmount || 0).toFixed(2));
     const sub = Number(Number(subtotal || 0).toFixed(2));
     const tax = Number(Number(totalTax || 0).toFixed(2));
-    const calculatedGrandTotal = Number((sub + tax + pkg + trp + oth - comm).toFixed(2));
+    const adj = Number(Number(adjustment || 0).toFixed(2));
+    const calculatedGrandTotal = Number((sub + tax - adj).toFixed(2));
 
     const roundedItems = (items || []).map(item => ({
       ...item,
@@ -229,6 +234,7 @@ const updateInvoice = async (req, res) => {
     existingInvoice.commissionType = commissionType || existingInvoice.commissionType;
     existingInvoice.commissionValue = Number(commissionValue) || 0;
     existingInvoice.commissionAmount = comm;
+    existingInvoice.adjustment = adj;
     existingInvoice.grandTotal = calculatedGrandTotal;
     existingInvoice.notes = notes || existingInvoice.notes;
     existingInvoice.termsConditions = termsConditions || existingInvoice.termsConditions;
