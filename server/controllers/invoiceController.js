@@ -78,6 +78,16 @@ const createInvoice = async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    if (gemContractNumber && gemContractNumber.trim() !== '') {
+      const escapedGem = gemContractNumber.trim().replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const existingGem = await Invoice.findOne({
+        gemContractNumber: { $regex: new RegExp(`^${escapedGem}$`, 'i') }
+      });
+      if (existingGem) {
+        return res.status(400).json({ message: `GeM contract number '${gemContractNumber.trim()}' is already in use by another invoice` });
+      }
+    }
+
     const pkg = Number(Number(packagingCharges || 0).toFixed(2));
     const trp = Number(Number(transportCharges || 0).toFixed(2));
     const oth = Number(Number(otherCharges || 0).toFixed(2));
@@ -99,7 +109,7 @@ const createInvoice = async (req, res) => {
     }));
 
     const invoice = await Invoice.create({
-      company, invoiceNumber, gemContractNumber,
+      company, invoiceNumber, gemContractNumber: gemContractNumber ? gemContractNumber.trim() : '',
       invoiceDate: invoiceDate || new Date(),
       paymentStatus: paymentStatus || 'Pending',
       paymentMethod: paymentMethod || 'Cash',
@@ -191,6 +201,17 @@ const updateInvoice = async (req, res) => {
       .map(item => item.product ? item.product.toString() : null)
       .filter(Boolean);
 
+    if (gemContractNumber !== undefined && gemContractNumber.trim() !== '') {
+      const escapedGem = gemContractNumber.trim().replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const existingGem = await Invoice.findOne({
+        _id: { $ne: req.params.id },
+        gemContractNumber: { $regex: new RegExp(`^${escapedGem}$`, 'i') }
+      });
+      if (existingGem) {
+        return res.status(400).json({ message: `GeM contract number '${gemContractNumber.trim()}' is already in use by another invoice` });
+      }
+    }
+
     const pkg = Number(Number(packagingCharges || 0).toFixed(2));
     const trp = Number(Number(transportCharges || 0).toFixed(2));
     const oth = Number(Number(otherCharges || 0).toFixed(2));
@@ -214,7 +235,7 @@ const updateInvoice = async (req, res) => {
     existingInvoice.company = req.user.companyId || company || existingInvoice.company;
     existingInvoice.invoiceNumber = invoiceNumber || existingInvoice.invoiceNumber;
     existingInvoice.invoiceDate = invoiceDate || existingInvoice.invoiceDate;
-    existingInvoice.gemContractNumber = gemContractNumber !== undefined ? gemContractNumber : existingInvoice.gemContractNumber;
+    existingInvoice.gemContractNumber = gemContractNumber !== undefined ? gemContractNumber.trim() : existingInvoice.gemContractNumber;
     existingInvoice.paymentStatus = paymentStatus || existingInvoice.paymentStatus;
     existingInvoice.paymentMethod = paymentMethod || existingInvoice.paymentMethod;
     existingInvoice.customerName = customerName || existingInvoice.customerName;
