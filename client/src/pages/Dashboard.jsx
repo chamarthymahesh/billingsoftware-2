@@ -7,6 +7,7 @@ import "./Sales.css";
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const Dashboard = () => {
+  console.log("page loaded");
   const navigate = useNavigate();
   const userInfo = JSON.parse(localStorage.getItem("userInfo"));
   const authHeader = { Authorization: `Bearer ${userInfo?.token}` };
@@ -50,7 +51,7 @@ const Dashboard = () => {
         const totalT = reportData.reduce((sum, inv) => sum + (inv.transportCharges || 0), 0);
         const totalC = reportData.reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
         const totalPaidC = reportData
-          .filter(inv => inv.commissionStatus === 'Paid')
+          .filter((inv) => inv.commissionStatus === "Paid")
           .reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
 
         setTotalProfit(totalP);
@@ -86,7 +87,7 @@ const Dashboard = () => {
           const transport = compInvoices.reduce((sum, inv) => sum + (inv.transportCharges || 0), 0);
           const commission = compInvoices.reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
           const paidCommission = compInvoices
-            .filter(inv => inv.commissionStatus === 'Paid')
+            .filter((inv) => inv.commissionStatus === "Paid")
             .reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
           const purchases = compPurchases.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
 
@@ -276,11 +277,13 @@ const Dashboard = () => {
               </div>
               <div>
                 <p>{isSuperAdmin ? "TOTAL COMMISSION (ALL) ↗" : "TOTAL COMMISSION"}</p>
-                <h3 style={{ fontSize: '1.4rem' }}>₹{totalCommission.toFixed(2)}</h3>
-                <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px' }}>
-                  <span style={{ color: '#10b981' }}>Paid: ₹{totalPaidCommission.toFixed(2)}</span>
+                <h3 style={{ fontSize: "1.4rem" }}>₹{totalCommission.toFixed(2)}</h3>
+                <div style={{ display: "flex", gap: "8px", fontSize: "0.8rem", color: "#94a3b8", marginTop: "4px" }}>
+                  <span style={{ color: "#10b981" }}>Paid: ₹{totalPaidCommission.toFixed(2)}</span>
                   <span>|</span>
-                  <span style={{ color: '#ef4444' }}>Pending: ₹{(totalCommission - totalPaidCommission).toFixed(2)}</span>
+                  <span style={{ color: "#ef4444" }}>
+                    Pending: ₹{(totalCommission - totalPaidCommission).toFixed(2)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -368,7 +371,7 @@ const Dashboard = () => {
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              justifyContent: "center"
+              justifyContent: "center",
             }}
           >
             <Activity size={48} style={{ color: "#3b82f6", opacity: 0.5, marginBottom: "16px" }} />
@@ -518,10 +521,21 @@ const Dashboard = () => {
                         <span style={{ color: "#F8FAFC", fontWeight: 600 }}>{item.companyName}</span>
                         <span style={{ color: modalConfig.color, fontWeight: 700 }}>₹{val.toFixed(2)}</span>
                       </div>
-                      {activeBreakdownModal === 'commission' && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#94a3b8', marginTop: '-4px', marginBottom: '8px' }}>
-                          <span style={{ color: '#10b981' }}>Paid: ₹{(item.paidCommission || 0).toFixed(2)}</span>
-                          <span style={{ color: '#ef4444' }}>Pending: ₹{(val - (item.paidCommission || 0)).toFixed(2)}</span>
+                      {activeBreakdownModal === "commission" && (
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            fontSize: "0.8rem",
+                            color: "#94a3b8",
+                            marginTop: "-4px",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          <span style={{ color: "#10b981" }}>Paid: ₹{(item.paidCommission || 0).toFixed(2)}</span>
+                          <span style={{ color: "#ef4444" }}>
+                            Pending: ₹{(val - (item.paidCommission || 0)).toFixed(2)}
+                          </span>
                         </div>
                       )}
 
@@ -561,294 +575,299 @@ const Dashboard = () => {
       )}
 
       {/* Detailed Company Customer/Vendor Breakdown Modal */}
-      {selectedCompanyForBreakdown && (() => {
-        // Filter invoices for this company
-        const compInvoicesForModal = allInvoices.filter((inv) => {
-          const invCompId = inv.company?._id || inv.company;
-          return String(invCompId) === String(selectedCompanyForBreakdown.companyId);
-        });
+      {selectedCompanyForBreakdown &&
+        (() => {
+          // Filter invoices for this company
+          const compInvoicesForModal = allInvoices.filter((inv) => {
+            const invCompId = inv.company?._id || inv.company;
+            return String(invCompId) === String(selectedCompanyForBreakdown.companyId);
+          });
 
-        // Filter purchases for this company
-        const compPurchasesForModal = allPurchases.filter((p) => {
-          const pCompId = p.targetCompany?._id || p.targetCompany;
-          return String(pCompId) === String(selectedCompanyForBreakdown.companyId);
-        });
+          // Filter purchases for this company
+          const compPurchasesForModal = allPurchases.filter((p) => {
+            const pCompId = p.targetCompany?._id || p.targetCompany;
+            return String(pCompId) === String(selectedCompanyForBreakdown.companyId);
+          });
 
-        // Calculate Customer Stats
-        const customerStatsMap = {};
-        compInvoicesForModal.forEach((inv) => {
-          const name = inv.customerName || "Unknown Customer";
-          if (!customerStatsMap[name]) {
-            customerStatsMap[name] = {
-              name,
-              revenue: 0,
-              profit: 0,
-              invoiceCount: 0,
-            };
-          }
-          customerStatsMap[name].revenue += inv.grandTotal || 0;
-          customerStatsMap[name].profit += inv.finalProfit || 0;
-          customerStatsMap[name].invoiceCount += 1;
-        });
+          // Calculate Customer Stats
+          const customerStatsMap = {};
+          compInvoicesForModal.forEach((inv) => {
+            const name = inv.customerName || "Unknown Customer";
+            if (!customerStatsMap[name]) {
+              customerStatsMap[name] = {
+                name,
+                revenue: 0,
+                profit: 0,
+                invoiceCount: 0,
+              };
+            }
+            customerStatsMap[name].revenue += inv.grandTotal || 0;
+            customerStatsMap[name].profit += inv.finalProfit || 0;
+            customerStatsMap[name].invoiceCount += 1;
+          });
 
-        // Calculate Vendor Stats
-        const vendorStatsMap = {};
-        compPurchasesForModal.forEach((p) => {
-          const name = p.supplierName || "Unknown Supplier";
-          if (!vendorStatsMap[name]) {
-            vendorStatsMap[name] = {
-              name,
-              purchases: 0,
-              billCount: 0,
-            };
-          }
-          vendorStatsMap[name].purchases += p.grandTotal || 0;
-          vendorStatsMap[name].billCount += 1;
-        });
+          // Calculate Vendor Stats
+          const vendorStatsMap = {};
+          compPurchasesForModal.forEach((p) => {
+            const name = p.supplierName || "Unknown Supplier";
+            if (!vendorStatsMap[name]) {
+              vendorStatsMap[name] = {
+                name,
+                purchases: 0,
+                billCount: 0,
+              };
+            }
+            vendorStatsMap[name].purchases += p.grandTotal || 0;
+            vendorStatsMap[name].billCount += 1;
+          });
 
-        const customerStatsList = Object.values(customerStatsMap)
-          .filter(c => c.name.toLowerCase().includes(modalSearch.toLowerCase()))
-          .sort((a, b) => b.profit - a.profit);
+          const customerStatsList = Object.values(customerStatsMap)
+            .filter((c) => c.name.toLowerCase().includes(modalSearch.toLowerCase()))
+            .sort((a, b) => b.profit - a.profit);
 
-        const vendorStatsList = Object.values(vendorStatsMap)
-          .filter(v => v.name.toLowerCase().includes(modalSearch.toLowerCase()))
-          .sort((a, b) => b.purchases - a.purchases);
+          const vendorStatsList = Object.values(vendorStatsMap)
+            .filter((v) => v.name.toLowerCase().includes(modalSearch.toLowerCase()))
+            .sort((a, b) => b.purchases - a.purchases);
 
-        return (
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: "rgba(15, 23, 42, 0.85)",
-              backdropFilter: "blur(8px)",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              zIndex: 9999,
-              padding: "20px",
-            }}
-            onClick={() => setSelectedCompanyForBreakdown(null)}
-          >
+          return (
             <div
               style={{
-                background: "#1e293b",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: "16px",
-                width: "100%",
-                maxWidth: "800px",
-                maxHeight: "85vh",
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: "rgba(15, 23, 42, 0.85)",
+                backdropFilter: "blur(8px)",
                 display: "flex",
-                flexDirection: "column",
-                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+                justifyContent: "center",
+                alignItems: "center",
+                zIndex: 9999,
+                padding: "20px",
               }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={() => setSelectedCompanyForBreakdown(null)}
             >
-              {/* Header */}
               <div
                 style={{
+                  background: "#1e293b",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "16px",
+                  width: "100%",
+                  maxWidth: "800px",
+                  maxHeight: "85vh",
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "20px 24px",
-                  borderBottom: "1px solid rgba(255,255,255,0.08)",
+                  flexDirection: "column",
+                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
                 }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <div>
-                  <h3
-                    style={{
-                      color: "#F8FAFC",
-                      fontSize: "1.3rem",
-                      fontWeight: 700,
-                      margin: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                    }}
-                  >
-                    <Building2 size={22} color="#3b82f6" /> {selectedCompanyForBreakdown.companyName}
-                  </h3>
-                  <p style={{ margin: "4px 0 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
-                    Detailed Customer & Vendor/Supplier Breakdown
-                  </p>
-                </div>
-                <button
-                  onClick={() => setSelectedCompanyForBreakdown(null)}
+                {/* Header */}
+                <div
                   style={{
-                    background: "rgba(255,255,255,0.05)",
-                    border: "none",
-                    color: "#94a3b8",
-                    borderRadius: "50%",
-                    width: "32px",
-                    height: "32px",
-                    cursor: "pointer",
                     display: "flex",
+                    justifyContent: "space-between",
                     alignItems: "center",
-                    justifyContent: "center",
-                    transition: "background 0.2s",
+                    padding: "20px 24px",
+                    borderBottom: "1px solid rgba(255,255,255,0.08)",
                   }}
                 >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Tabs and Search Bar */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "16px 24px",
-                  borderBottom: "1px solid rgba(255,255,255,0.05)",
-                  gap: "16px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <button
-                    onClick={() => { setBreakdownTab("customers"); setModalSearch(""); }}
-                    style={{
-                      padding: "8px 16px",
-                      borderRadius: "8px",
-                      border: "none",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      fontSize: "0.9rem",
-                      background: breakdownTab === "customers" ? "#3b82f6" : "rgba(255,255,255,0.05)",
-                      color: breakdownTab === "customers" ? "white" : "#94a3b8",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    Customers ({Object.keys(customerStatsMap).length})
-                  </button>
-                  <button
-                    onClick={() => { setBreakdownTab("vendors"); setModalSearch(""); }}
-                    style={{
-                      padding: "8px 16px",
-                      borderRadius: "8px",
-                      border: "none",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      fontSize: "0.9rem",
-                      background: breakdownTab === "vendors" ? "#f59e0b" : "rgba(255,255,255,0.05)",
-                      color: breakdownTab === "vendors" ? "white" : "#94a3b8",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    Vendors / Suppliers ({Object.keys(vendorStatsMap).length})
-                  </button>
-                </div>
-
-                <div style={{ position: "relative", minWidth: "220px" }}>
-                  <Search
-                    size={16}
-                    style={{
-                      position: "absolute",
-                      left: "12px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      color: "#64748b",
-                    }}
-                  />
-                  <input
-                    type="text"
-                    placeholder={`Search ${breakdownTab === "customers" ? "customers" : "vendors"}...`}
-                    value={modalSearch}
-                    onChange={(e) => setModalSearch(e.target.value)}
-                    style={{
-                      width: "100%",
-                      background: "rgba(15, 23, 42, 0.4)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: "8px",
-                      padding: "8px 12px 8px 36px",
-                      color: "white",
-                      fontSize: "0.9rem",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Modal Body */}
-              <div style={{ padding: "24px", overflowY: "auto", flex: 1 }}>
-                {breakdownTab === "customers" ? (
-                  <div className="sl-table-wrap">
-                    <table className="sl-table">
-                      <thead>
-                        <tr>
-                          <th>Customer Name</th>
-                          <th>Total Sales (Revenue)</th>
-                          <th>Total Profit</th>
-                          <th>Profit Margin</th>
-                          <th>Invoices</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {customerStatsList.length === 0 ? (
-                          <tr>
-                            <td colSpan={5} className="sl-center">
-                              No customer statistics found
-                            </td>
-                          </tr>
-                        ) : (
-                          customerStatsList.map((c, idx) => {
-                            const margin = c.revenue > 0 ? (c.profit / c.revenue) * 100 : 0;
-                            return (
-                              <tr key={idx}>
-                                <td style={{ fontWeight: 600, color: "#F8FAFC" }}>{c.name}</td>
-                                <td>₹{c.revenue.toFixed(2)}</td>
-                                <td style={{ color: c.profit >= 0 ? "#10b981" : "#ef4444", fontWeight: 600 }}>
-                                  ₹{c.profit.toFixed(2)}
-                                </td>
-                                <td style={{ color: margin >= 0 ? "#3b82f6" : "#ef4444" }}>
-                                  {margin.toFixed(1)}%
-                                </td>
-                                <td>{c.invoiceCount}</td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
+                  <div>
+                    <h3
+                      style={{
+                        color: "#F8FAFC",
+                        fontSize: "1.3rem",
+                        fontWeight: 700,
+                        margin: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                      }}
+                    >
+                      <Building2 size={22} color="#3b82f6" /> {selectedCompanyForBreakdown.companyName}
+                    </h3>
+                    <p style={{ margin: "4px 0 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
+                      Detailed Customer & Vendor/Supplier Breakdown
+                    </p>
                   </div>
-                ) : (
-                  <div className="sl-table-wrap">
-                    <table className="sl-table">
-                      <thead>
-                        <tr>
-                          <th>Vendor / Supplier Name</th>
-                          <th>Total Purchases</th>
-                          <th>Purchase Bills</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {vendorStatsList.length === 0 ? (
+                  <button
+                    onClick={() => setSelectedCompanyForBreakdown(null)}
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "none",
+                      color: "#94a3b8",
+                      borderRadius: "50%",
+                      width: "32px",
+                      height: "32px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "background 0.2s",
+                    }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Tabs and Search Bar */}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "16px 24px",
+                    borderBottom: "1px solid rgba(255,255,255,0.05)",
+                    gap: "16px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      onClick={() => {
+                        setBreakdownTab("customers");
+                        setModalSearch("");
+                      }}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        fontSize: "0.9rem",
+                        background: breakdownTab === "customers" ? "#3b82f6" : "rgba(255,255,255,0.05)",
+                        color: breakdownTab === "customers" ? "white" : "#94a3b8",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      Customers ({Object.keys(customerStatsMap).length})
+                    </button>
+                    <button
+                      onClick={() => {
+                        setBreakdownTab("vendors");
+                        setModalSearch("");
+                      }}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        fontSize: "0.9rem",
+                        background: breakdownTab === "vendors" ? "#f59e0b" : "rgba(255,255,255,0.05)",
+                        color: breakdownTab === "vendors" ? "white" : "#94a3b8",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      Vendors / Suppliers ({Object.keys(vendorStatsMap).length})
+                    </button>
+                  </div>
+
+                  <div style={{ position: "relative", minWidth: "220px" }}>
+                    <Search
+                      size={16}
+                      style={{
+                        position: "absolute",
+                        left: "12px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        color: "#64748b",
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder={`Search ${breakdownTab === "customers" ? "customers" : "vendors"}...`}
+                      value={modalSearch}
+                      onChange={(e) => setModalSearch(e.target.value)}
+                      style={{
+                        width: "100%",
+                        background: "rgba(15, 23, 42, 0.4)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        borderRadius: "8px",
+                        padding: "8px 12px 8px 36px",
+                        color: "white",
+                        fontSize: "0.9rem",
+                        outline: "none",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Modal Body */}
+                <div style={{ padding: "24px", overflowY: "auto", flex: 1 }}>
+                  {breakdownTab === "customers" ? (
+                    <div className="sl-table-wrap">
+                      <table className="sl-table">
+                        <thead>
                           <tr>
-                            <td colSpan={3} className="sl-center">
-                              No vendor statistics found
-                            </td>
+                            <th>Customer Name</th>
+                            <th>Total Sales (Revenue)</th>
+                            <th>Total Profit</th>
+                            <th>Profit Margin</th>
+                            <th>Invoices</th>
                           </tr>
-                        ) : (
-                          vendorStatsList.map((v, idx) => (
-                            <tr key={idx}>
-                              <td style={{ fontWeight: 600, color: "#F8FAFC" }}>{v.name}</td>
-                              <td style={{ color: "#f59e0b", fontWeight: 600 }}>₹{v.purchases.toFixed(2)}</td>
-                              <td>{v.billCount}</td>
+                        </thead>
+                        <tbody>
+                          {customerStatsList.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="sl-center">
+                                No customer statistics found
+                              </td>
                             </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                          ) : (
+                            customerStatsList.map((c, idx) => {
+                              const margin = c.revenue > 0 ? (c.profit / c.revenue) * 100 : 0;
+                              return (
+                                <tr key={idx}>
+                                  <td style={{ fontWeight: 600, color: "#F8FAFC" }}>{c.name}</td>
+                                  <td>₹{c.revenue.toFixed(2)}</td>
+                                  <td style={{ color: c.profit >= 0 ? "#10b981" : "#ef4444", fontWeight: 600 }}>
+                                    ₹{c.profit.toFixed(2)}
+                                  </td>
+                                  <td style={{ color: margin >= 0 ? "#3b82f6" : "#ef4444" }}>{margin.toFixed(1)}%</td>
+                                  <td>{c.invoiceCount}</td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="sl-table-wrap">
+                      <table className="sl-table">
+                        <thead>
+                          <tr>
+                            <th>Vendor / Supplier Name</th>
+                            <th>Total Purchases</th>
+                            <th>Purchase Bills</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {vendorStatsList.length === 0 ? (
+                            <tr>
+                              <td colSpan={3} className="sl-center">
+                                No vendor statistics found
+                              </td>
+                            </tr>
+                          ) : (
+                            vendorStatsList.map((v, idx) => (
+                              <tr key={idx}>
+                                <td style={{ fontWeight: 600, color: "#F8FAFC" }}>{v.name}</td>
+                                <td style={{ color: "#f59e0b", fontWeight: 600 }}>₹{v.purchases.toFixed(2)}</td>
+                                <td>{v.billCount}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
     </div>
   );
 };

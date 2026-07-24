@@ -19,8 +19,13 @@ const Login = () => {
         },
       };
 
+      console.log("Before calling the api");
+
       const { data } = await axios.post(`${API}/api/users/login`, { email, password }, config);
-      localStorage.setItem("userInfo", JSON.stringify(data));
+
+      console.log("got the data:", data);
+      await localStorage.setItem("userInfo", JSON.stringify(data));
+      console.log("setting the value", localStorage.getItem("userInfo"));
       navigate("/dashboard");
     } catch (error) {
       setError(error.response && error.response.data.message ? error.response.data.message : error.message);

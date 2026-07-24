@@ -28,7 +28,13 @@ const protect = async (req, res, next) => {
 };
 
 const superAdmin = (req, res, next) => {
-  if (req.user && (req.user.role === 'Super Admin' || req.user.role === 'Company Admin')) {
+  if (
+    req.user &&
+    (req.user.role === 'Super Admin' ||
+      req.user.role === 'Company Admin' ||
+      req.user.role === 'Manager' ||
+      req.user.permissions?.includes('/products'))
+  ) {
     next();
   } else {
     res.status(401).json({ message: 'Not authorized as an Admin' });

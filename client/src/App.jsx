@@ -1,32 +1,36 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Layout from './components/Layout';
-import Companies from './pages/Companies';
-import Products from './pages/Products';
-import Purchases from './pages/Purchases';
-import Sales from './pages/Sales';
-import CreateInvoice from './pages/CreateInvoice';
-import Settings from './pages/Settings';
-import InvoiceDesigner from './pages/InvoiceDesigner';
-import InvoiceProfitReport from './pages/InvoiceProfitReport';
-import ViewInvoice from './pages/ViewInvoice';
-import GSTR1Report from './pages/GSTR1Report';
-import GlobalStock from './pages/GlobalStock';
-import StockAdjustment from './pages/StockAdjustment';
-import UserRoles from './pages/UserRoles';
-import './App.css';
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Layout from "./components/Layout";
+import Companies from "./pages/Companies";
+import Products from "./pages/Products";
+import Purchases from "./pages/Purchases";
+import Sales from "./pages/Sales";
+import CreateInvoice from "./pages/CreateInvoice";
+import Settings from "./pages/Settings";
+import InvoiceDesigner from "./pages/InvoiceDesigner";
+import InvoiceProfitReport from "./pages/InvoiceProfitReport";
+import ViewInvoice from "./pages/ViewInvoice";
+import GSTR1Report from "./pages/GSTR1Report";
+import GlobalStock from "./pages/GlobalStock";
+import StockAdjustment from "./pages/StockAdjustment";
+import UserRoles from "./pages/UserRoles";
+import "./App.css";
+
+const ProtectedRoute = () => {
+  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+  if (userInfo) return <Layout />;
+  return <Navigate to="/login" />;
+};
 
 function App() {
-  const userInfo = JSON.parse(localStorage.getItem('userInfo'));
-
   return (
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
-        
+
         {/* Protected Routes wrapped in Layout */}
-        <Route path="/" element={userInfo ? <Layout /> : <Navigate to="/login" />}>
+        <Route path="/" element={<ProtectedRoute />}>
           <Route index element={<Navigate to="/dashboard" />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="companies" element={<Companies />} />
