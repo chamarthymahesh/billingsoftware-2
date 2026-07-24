@@ -61,8 +61,8 @@ const Sales = () => {
     return matchesCustomer || matchesInvoice || matchesGem || matchesProduct;
   });
 
-  const totalSales = sales.reduce((sum, s) => sum + ((s.subtotal || 0) + (s.totalTax || 0)), 0);
-  const paidSales = sales.filter(s => s.paymentStatus === 'Paid').reduce((sum, s) => sum + ((s.subtotal || 0) + (s.totalTax || 0)), 0);
+  const totalSales = sales.reduce((sum, s) => sum + (s.grandTotal !== undefined ? s.grandTotal : ((s.subtotal || 0) + (s.totalTax || 0))), 0);
+  const paidSales = sales.filter(s => s.paymentStatus === 'Paid').reduce((sum, s) => sum + (s.grandTotal !== undefined ? s.grandTotal : ((s.subtotal || 0) + (s.totalTax || 0))), 0);
   const totalBills = sales.length;
 
   const getStatusClass = (status) => {
@@ -214,7 +214,7 @@ const Sales = () => {
                   <td>{s.items?.length || 0} items</td>
                   <td>₹{(s.subtotal || 0).toFixed(2)}</td>
                   <td>₹{(s.totalTax || 0).toFixed(2)}</td>
-                  <td className="sl-bold-price">₹{((s.subtotal || 0) + (s.totalTax || 0)).toFixed(2)}</td>
+                  <td className="sl-bold-price">₹{(s.grandTotal !== undefined ? s.grandTotal : ((s.subtotal || 0) + (s.totalTax || 0))).toFixed(2)}</td>
                   <td>
                     <span className={`sl-status-badge ${getStatusClass(s.paymentStatus)}`}>
                       {s.paymentStatus || 'Pending'}
