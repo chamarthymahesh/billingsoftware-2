@@ -612,7 +612,15 @@ const CreateInvoice = () => {
               </div>
               <div className="ci-field">
                 <label>INVOICE DATE *</label>
-                <input type="date" name="invoiceDate" value={form.invoiceDate} onChange={handleInput} required />
+                <input 
+                  type="date" 
+                  name="invoiceDate" 
+                  value={form.invoiceDate} 
+                  onChange={handleInput} 
+                  required 
+                  onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                  onFocus={(e) => e.target.showPicker && e.target.showPicker()}
+                />
               </div>
               <div className="ci-field">
                 <label>PAYMENT STATUS</label>

@@ -257,7 +257,24 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
         }
       }
 
-      updated.total = calcTotal(updated);
+      if (field === 'total') {
+        const newTotal = parseFloat(value) || 0;
+        const qty = parseFloat(item.qty) || 0;
+        const gst = parseFloat(item.gstRate) || 0;
+
+        if (qty > 0) {
+          let newRate;
+          if (item.isInclusive) {
+            newRate = newTotal / qty;
+          } else {
+            newRate = newTotal / (qty * (1 + gst / 100));
+          }
+          updated.rate = Number(newRate.toFixed(2));
+        }
+        updated.total = value;
+      } else {
+        updated.total = calcTotal(updated);
+      }
       return updated;
     }));
   };
@@ -376,7 +393,15 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
             </div>
             <div className="rpm-field">
               <label>PURCHASE DATE *</label>
-              <input type="date" name="purchaseDate" required value={form.purchaseDate} onChange={handleInput} />
+              <input 
+                type="date" 
+                name="purchaseDate" 
+                required 
+                value={form.purchaseDate} 
+                onChange={handleInput} 
+                onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                onFocus={(e) => e.target.showPicker && e.target.showPicker()}
+              />
             </div>
             <div className="rpm-field">
               <label>PAYMENT STATUS</label>
@@ -450,7 +475,8 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
                           onChange={e => handleItemChange(item.id, 'isInclusive', e.target.checked)} />
                       </td>
                       <td>
-                        <input type="text" className="rpm-input rpm-readonly" readOnly value={item.total} />
+                        <input type="number" className="rpm-input" min="0" step="0.01" value={item.total}
+                          onChange={e => handleItemChange(item.id, 'total', e.target.value)} />
                       </td>
                       <td>
                         <button type="button" className="rpm-delete-item" onClick={() => removeItem(item.id)}>

@@ -86,9 +86,19 @@
 
 .rpm-field input[type="text"],
 .rpm-field input[type="date"],
-.rpm-field input[type="number"],
-.rpm-field select {
+.rpm-field input[type="number"] {
   background: #111827; /* Very dark background for inputs */
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 12px 14px;
+  color: #f3f4f6;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.rpm-field select {
+  background: #111827;
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 6px;
   padding: 12px 14px;
