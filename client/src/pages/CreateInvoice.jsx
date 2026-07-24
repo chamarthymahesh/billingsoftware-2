@@ -14,6 +14,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import CreatableSelect from "../components/CreatableSelect";
+import ProductCreateModal from "../components/ProductCreateModal";
 import "./CreateInvoice.css";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -151,6 +152,10 @@ const CreateInvoice = () => {
   const [sameAsShipping, setSameAsShipping] = useState(false);
 
   const [showGlobal, setShowGlobal] = useState(false);
+
+  const [quickProductModalOpen, setQuickProductModalOpen] = useState(false);
+  const [quickProductInitialName, setQuickProductInitialName] = useState("");
+  const [activeRowIdForQuickProduct, setActiveRowIdForQuickProduct] = useState(null);
 
   useEffect(() => {
     if (id) {
@@ -401,6 +406,36 @@ const CreateInvoice = () => {
     } catch (err) {
       alert(err.response?.data?.message || "Error transferring stock");
     }
+  };
+
+  const handleQuickProductCreated = (newProduct) => {
+    // 1. Add it to our local products array
+    setProducts((prev) => [newProduct, ...prev]);
+
+    // 2. Map this new product into the active item row
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id === activeRowIdForQuickProduct) {
+          let updated = {
+            ...item,
+            productName: newProduct.name,
+            product: newProduct._id,
+            rate: newProduct.sellingPrice || 0,
+            mrp: newProduct.mrp || 0,
+            gstRate: newProduct.gstRate || 18,
+            hsnCode: newProduct.hsnCode || "",
+            unit: newProduct.unit || "Pcs",
+            companyStocks: newProduct.companyStocks || [],
+            availableStock: newProduct.stock || 0,
+            productCompanyId: null,
+            totalPurchased: newProduct.totalPurchased || 0,
+            selectedSourceCompanyId: "",
+          };
+          return calcItem(updated, "productName");
+        }
+        return item;
+      })
+    );
   };
 
   // Billing same as shipping
@@ -787,6 +822,11 @@ const CreateInvoice = () => {
                             onChange={(val) => handleItemChange(item.id, "productName", val)}
                             options={productOptions}
                             placeholder="Search..."
+                            onCreateOption={(name) => {
+                              setQuickProductInitialName(name);
+                              setActiveRowIdForQuickProduct(item.id);
+                              setQuickProductModalOpen(true);
+                            }}
                           />
                           {needsTransfer && (
                             <div style={{ fontSize: "10px", color: "#fbbf24", marginTop: "4px", background: "rgba(245, 158, 11, 0.1)", padding: "6px", borderRadius: "4px" }}>
@@ -1124,6 +1164,12 @@ const CreateInvoice = () => {
           </div>
         </div>
       </form>
+      <ProductCreateModal
+        isOpen={quickProductModalOpen}
+        onClose={() => setQuickProductModalOpen(false)}
+        initialName={quickProductInitialName}
+        onProductCreated={handleQuickProductCreated}
+      />
     </div>
   );
 };

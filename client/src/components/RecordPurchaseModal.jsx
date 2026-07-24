@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { X, Plus, Trash2 } from 'lucide-react';
 import CreatableSelect from './CreatableSelect';
+import ProductCreateModal from './ProductCreateModal';
 import './RecordPurchaseModal.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -137,6 +138,14 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
   const [showGlobal, setShowGlobal] = useState(false);
   const [modalSuppliers, setModalSuppliers] = useState(suppliers);
   const [modalCompanies, setModalCompanies] = useState(companies);
+  const [localProducts, setLocalProducts] = useState([]);
+  const [quickProductModalOpen, setQuickProductModalOpen] = useState(false);
+  const [quickProductInitialName, setQuickProductInitialName] = useState('');
+  const [activeRowIdForQuickProduct, setActiveRowIdForQuickProduct] = useState(null);
+
+  useEffect(() => {
+    if (products) setLocalProducts(products);
+  }, [products]);
 
   useEffect(() => {
     const fetchSuppliersAndCompanies = async () => {
@@ -176,7 +185,7 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
   ];
 
   const supplierOptions = [...new Set(combinedSuppliers.map(s => toProperCase(s.name)))].filter(Boolean);
-  const productOptions = [...new Set(products.map(p => toProperCase(p.name)))].filter(Boolean);
+  const productOptions = [...new Set(localProducts.map(p => toProperCase(p.name)))].filter(Boolean);
 
   const handleInput = (e) => {
     const { name, value } = e.target;
@@ -209,6 +218,28 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
     setItems(prev => prev.filter(item => item.id !== id));
   };
 
+  const handleQuickProductCreated = (newProduct) => {
+    // 1. Add it to our local products array
+    setLocalProducts(prev => [newProduct, ...prev]);
+
+    // 2. Map this new product into the active item row
+    setItems(prev => prev.map(item => {
+      if (item.id === activeRowIdForQuickProduct) {
+        let updated = {
+          ...item,
+          productName: newProduct.name,
+          productId: newProduct._id,
+          rate: newProduct.purchasePrice || 0,
+          gstRate: newProduct.gstRate || 18,
+          isInclusive: false,
+        };
+        updated.total = calcTotal(updated);
+        return updated;
+      }
+      return item;
+    }));
+  };
+
   const handleItemChange = (id, field, value) => {
     setItems(prev => prev.map(item => {
       if (item.id !== id) return item;
@@ -216,7 +247,7 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
 
       if (field === 'productName') {
         updated.productName = toProperCase(value);
-        const found = products.find(p => p.name.toLowerCase() === value.toLowerCase());
+        const found = localProducts.find(p => p.name.toLowerCase() === value.toLowerCase());
         if (found) {
           updated.productId = found._id;
           updated.rate = found.purchasePrice || 0;
@@ -393,6 +424,11 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
                           onChange={val => handleItemChange(item.id, 'productName', val)}
                           options={productOptions}
                           placeholder="Search product..."
+                          onCreateOption={(name) => {
+                            setQuickProductInitialName(name);
+                            setActiveRowIdForQuickProduct(item.id);
+                            setQuickProductModalOpen(true);
+                          }}
                         />
                       </td>
                       <td>
@@ -479,6 +515,12 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
           </div>
         </form>
       </div>
+      <ProductCreateModal
+        isOpen={quickProductModalOpen}
+        onClose={() => setQuickProductModalOpen(false)}
+        initialName={quickProductInitialName}
+        onProductCreated={handleQuickProductCreated}
+      />
     </div>
   );
 };

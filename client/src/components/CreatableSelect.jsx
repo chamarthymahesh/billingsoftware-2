@@ -16,7 +16,7 @@ const toProperCase = (str) => {
  *  - placeholder: string
  *  - label: string (optional, shown inside when empty)
  */
-const CreatableSelect = ({ value, onChange, options = [], placeholder = "Search or create…" }) => {
+const CreatableSelect = ({ value, onChange, options = [], placeholder = "Search or create…", onCreateOption }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
@@ -73,7 +73,11 @@ const CreatableSelect = ({ value, onChange, options = [], placeholder = "Search 
 
   const createNew = () => {
     if (properQuery) {
-      onChange(properQuery);
+      if (onCreateOption) {
+        onCreateOption(properQuery);
+      } else {
+        onChange(properQuery);
+      }
       setOpen(false);
       setQuery("");
     }
