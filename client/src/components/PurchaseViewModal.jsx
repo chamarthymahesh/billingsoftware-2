@@ -4,6 +4,28 @@ import './PurchaseViewModal.css';
 const PurchaseViewModal = ({ purchase, onClose }) => {
   if (!purchase) return null;
 
+  const totalTax = purchase.items?.reduce((sum, item) => {
+    const qty = item.qty || 0;
+    const rate = item.rate || 0;
+    const gst = item.gstRate || 0;
+    let taxAmount = 0;
+    if (item.isInclusive) {
+      const baseRate = rate / (1 + gst / 100);
+      taxAmount = (rate * qty) - baseRate * qty;
+    } else {
+      const taxableAmount = rate * qty;
+      taxAmount = (taxableAmount * gst) / 100;
+    }
+    return sum + taxAmount;
+  }, 0) || 0;
+  const subtotal = (purchase.itemsTotal || 0) - totalTax;
+
+  const buyerGSTIN = purchase.targetCompany?.gstin || '';
+  const buyerStateCode = buyerGSTIN.substring(0, 2);
+  const sellerGSTIN = purchase.supplierGSTIN || '';
+  const sellerStateCode = sellerGSTIN.substring(0, 2);
+  const isInterState = buyerStateCode && sellerStateCode && buyerStateCode !== sellerStateCode;
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'Paid':    return { bg: 'rgba(16,185,129,0.15)', color: '#34d399' };
@@ -108,6 +130,29 @@ const PurchaseViewModal = ({ purchase, onClose }) => {
 
         {/* Totals */}
         <div className="pvm-totals">
+          <div className="pvm-total-row">
+            <span>Taxable Amount</span>
+            <span>₹{subtotal.toFixed(2)}</span>
+          </div>
+          {totalTax > 0 && (
+            isInterState ? (
+              <div className="pvm-total-row">
+                <span>IGST</span>
+                <span>₹{totalTax.toFixed(2)}</span>
+              </div>
+            ) : (
+              <>
+                <div className="pvm-total-row">
+                  <span>CGST</span>
+                  <span>₹{(totalTax / 2).toFixed(2)}</span>
+                </div>
+                <div className="pvm-total-row">
+                  <span>SGST</span>
+                  <span>₹{(totalTax / 2).toFixed(2)}</span>
+                </div>
+              </>
+            )
+          )}
           <div className="pvm-total-row">
             <span>Items Total</span>
             <span>₹{purchase.itemsTotal?.toFixed(2)}</span>

@@ -46,7 +46,7 @@ export const createPurchase = async (req, res) => {
       itemsTotal,
       extraCharges,
       adjustment: Number(adjustment) || 0,
-      grandTotal,
+      grandTotal: Math.round(grandTotal),
     });
 
     const savedPurchase = await purchase.save();
@@ -74,7 +74,7 @@ export const getPurchases = async (req, res) => {
     const filter = targetCompany ? { targetCompany } : {};
 
     const purchases = await Purchase.find(filter)
-      .populate("targetCompany", "name")
+      .populate("targetCompany", "name gstin")
       .populate("items.product", "name category unit")
       .sort({ createdAt: -1 });
 
@@ -147,7 +147,7 @@ export const updatePurchase = async (req, res) => {
     purchase.itemsTotal = itemsTotal;
     purchase.extraCharges = extraCharges;
     purchase.adjustment = Number(adjustment) || 0;
-    purchase.grandTotal = grandTotal;
+    purchase.grandTotal = Math.round(grandTotal);
 
     const updated = await purchase.save();
 
@@ -301,7 +301,7 @@ export const transferStock = async (req, res) => {
       billingAddress: targetCompanyObj.address || "",
       subtotal: taxableAmount,
       totalTax: taxAmount,
-      grandTotal: total,
+      grandTotal: Math.round(total),
       materialDeliveryStatus: "Delivered",
       items: [
         {
@@ -331,7 +331,7 @@ export const transferStock = async (req, res) => {
       paymentStatus: "Paid",
       itemsTotal: total,
       extraCharges: 0,
-      grandTotal: total,
+      grandTotal: Math.round(total),
       items: [
         {
           product: product._id,

@@ -562,6 +562,13 @@ const CreateInvoice = () => {
   });
   const customerOptions = combinedCustomers.map((c) => toProper(c.name));
 
+  const selectedCompanyObj = companies.find(c => c._id === form.company);
+  const sellerGSTIN = selectedCompanyObj?.gstin || '';
+  const sellerStateCode = sellerGSTIN.substring(0, 2);
+  const customerGSTIN = form.customerGSTIN || '';
+  const customerStateCode = customerGSTIN.substring(0, 2) || (form.placeOfSupply ? form.placeOfSupply.substring(0, 2) : '') || (form.customerState ? form.customerState.substring(0, 2) : '');
+  const isInterState = sellerStateCode && customerStateCode && sellerStateCode !== customerStateCode;
+
   return (
     <div className="ci-page">
       {/* Top Bar */}
@@ -1112,10 +1119,23 @@ const CreateInvoice = () => {
                   <span>Total Discount</span>
                   <span>-₹{totalDiscount.toFixed(2)}</span>
                 </div>
-                <div className="ci-summary-row">
-                  <span>Total GST</span>
-                  <span>₹{totalTax.toFixed(2)}</span>
-                </div>
+                {isInterState ? (
+                  <div className="ci-summary-row">
+                    <span>IGST</span>
+                    <span>₹{totalTax.toFixed(2)}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="ci-summary-row">
+                      <span>CGST</span>
+                      <span>₹{(totalTax / 2).toFixed(2)}</span>
+                    </div>
+                    <div className="ci-summary-row">
+                      <span>SGST</span>
+                      <span>₹{(totalTax / 2).toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
                 <div className="ci-summary-row">
                   <span>Extra Charges</span>
                   <span>+₹{extraCharges.toFixed(2)}</span>
@@ -1129,12 +1149,27 @@ const CreateInvoice = () => {
                 {/* Per GST rate breakdown */}
                 {GST_RATES.filter((r) => items.some((i) => Number(i.gstRate) === r && i.taxAmount > 0)).map((r) => {
                   const tax = items.filter((i) => Number(i.gstRate) === r).reduce((s, i) => s + i.taxAmount, 0);
-                  return (
-                    <div key={r} className="ci-summary-row ci-sub">
-                      <span>GST @{r}%</span>
-                      <span>₹{tax.toFixed(2)}</span>
-                    </div>
-                  );
+                  if (isInterState) {
+                    return (
+                      <div key={r} className="ci-summary-row ci-sub">
+                        <span>IGST @{r}%</span>
+                        <span>₹{tax.toFixed(2)}</span>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div key={r} className="ci-summary-row ci-sub" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                          <span>CGST @{r / 2}%</span>
+                          <span>₹{(tax / 2).toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                          <span>SGST @{r / 2}%</span>
+                          <span>₹{(tax / 2).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    );
+                  }
                 })}
               </div>
 

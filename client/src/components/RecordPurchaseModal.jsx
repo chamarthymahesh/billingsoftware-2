@@ -280,10 +280,33 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
   };
 
   const itemsTotal = items.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
+  const totalTax = items.reduce((sum, item) => {
+    const qty = parseFloat(item.qty) || 0;
+    const rate = parseFloat(item.rate) || 0;
+    const gst = parseFloat(item.gstRate) || 0;
+    let taxAmount = 0;
+    if (item.isInclusive) {
+      const baseRate = rate / (1 + gst / 100);
+      taxAmount = (rate * qty) - baseRate * qty;
+    } else {
+      const taxableAmount = rate * qty;
+      taxAmount = (taxableAmount * gst) / 100;
+    }
+    return sum + taxAmount;
+  }, 0);
+  const subtotal = itemsTotal - totalTax;
+
+  const selectedCompanyObj = modalCompanies.find(c => c._id === form.targetCompany);
+  const buyerGSTIN = selectedCompanyObj?.gstin || '';
+  const buyerStateCode = buyerGSTIN.substring(0, 2);
+  const supplierGSTIN = form.supplierGSTIN || '';
+  const sellerStateCode = supplierGSTIN.substring(0, 2);
+  const isInterState = buyerStateCode && sellerStateCode && buyerStateCode !== sellerStateCode;
+
   const extraCharges = (parseFloat(form.packagingCharges) || 0)
     + (parseFloat(form.transportCharges) || 0)
     + (parseFloat(form.otherMiscCharges) || 0);
-  const grandTotal = itemsTotal - (parseFloat(form.adjustment) || 0);
+  const grandTotal = Math.round(itemsTotal - (parseFloat(form.adjustment) || 0));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -513,6 +536,17 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
               </div>
             </div>
             <div className="rpm-totals">
+              <div className="rpm-total-row"><span>Taxable Amount:</span><span>₹{subtotal.toFixed(2)}</span></div>
+              {totalTax > 0 && (
+                isInterState ? (
+                  <div className="rpm-total-row"><span>IGST:</span><span>₹{totalTax.toFixed(2)}</span></div>
+                ) : (
+                  <>
+                    <div className="rpm-total-row"><span>CGST:</span><span>₹{(totalTax / 2).toFixed(2)}</span></div>
+                    <div className="rpm-total-row"><span>SGST:</span><span>₹{(totalTax / 2).toFixed(2)}</span></div>
+                  </>
+                )
+              )}
               <div className="rpm-total-row"><span>Items Total:</span><span>₹{itemsTotal.toFixed(2)}</span></div>
               <div className="rpm-total-row"><span>Extra Charges:</span><span>+₹{extraCharges.toFixed(2)}</span></div>
               <div className="rpm-total-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
