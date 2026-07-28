@@ -55,54 +55,10 @@
   --sidebar-collapsed-width: 85px;
 }
 
-/* Reset and Base Styles */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: var(--font-body);
-  -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
-  overflow-x: hidden;
-  /* Premium Mesh Gradient Background */
-  background-image: 
-    radial-gradient(circle at 10% 0%, rgba(99, 102, 241, 0.15), transparent 30%),
-    radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.12), transparent 35%),
-    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.05), transparent 50%);
-  background-attachment: fixed;
-}
-
-/* Scrollbar styling */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-/* Typography */
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
-
 /* ====================== */
 /*   Layout App Shell     */
 /* ====================== */
-.app-container {
-  display: flex;
-  min-height: 100vh;
-  position: relative;
-}
+
 
 /* Mobile Menu Button */
 .mobile-menu-btn {
@@ -356,14 +312,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Main Content Area */
-.main-content {
-  flex-grow: 1;
-  margin-left: var(--sidebar-width);
-  padding: 3rem;
-  min-height: 100vh;
-  overflow-y: auto;
-  transition: margin-left 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
+
 
 /* Collapsed State */
 .sidebar-collapsed .sidebar { width: var(--sidebar-collapsed-width); padding: 1.75rem 0.75rem; }
@@ -378,7 +327,7 @@ h1, h2, h3, h4, h5, h6 {
 .sidebar-collapsed .nav-item:hover { transform: translateY(-2px); }
 .sidebar-collapsed .nav-item.active::before { display: none; }
 .sidebar-collapsed .logout-btn { justify-content: center; padding: 0.8rem; }
-.sidebar-collapsed .main-content { margin-left: var(--sidebar-collapsed-width); }
+.sidebar-collapsed 
 
 /* ====================== */
 /*   Premium Glass Cards  */
@@ -650,178 +599,3 @@ tr:hover td { background: rgba(255, 255, 255, 0.04); }
 /* Grid Layouts */
 .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-bottom: 2rem; }
 
-/* Tablet: hide text, keep icons */
-@media (max-width: 1024px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-  /* Auto-collapse sidebar on tablets */
-  .sidebar {
-    width: var(--sidebar-collapsed-width);
-  }
-  .logo-text, .nav-item-text, .footer-info, .logout-text {
-    opacity: 0;
-    width: 0;
-    overflow: hidden;
-    pointer-events: none;
-  }
-  .sidebar-top {
-    flex-direction: column;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  .logo-container {
-    justify-content: center;
-    padding: 0.25rem;
-  }
-  .nav-item {
-    justify-content: center;
-    padding: 0.75rem;
-  }
-  .logout-btn {
-    justify-content: center;
-    padding: 0.7rem;
-  }
-  .sidebar-toggle-btn {
-    display: none;
-  }
-  .main-content {
-    margin-left: var(--sidebar-collapsed-width);
-    padding: 1.5rem;
-  }
-}
-
-/* Mobile: off-canvas sidebar */
-@media (max-width: 768px) {
-  .mobile-menu-btn {
-    display: flex;
-  }
-  .sidebar-overlay {
-    display: block;
-  }
-  .sidebar {
-    width: var(--sidebar-width);
-    transform: translateX(-100%);
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: none;
-  }
-  .sidebar.sidebar-mobile-open {
-    transform: translateX(0);
-    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.5);
-  }
-  .sidebar-toggle-btn {
-    display: none;
-  }
-  /* Restore full text in mobile overlay mode */
-  .sidebar.sidebar-mobile-open .logo-text,
-  .sidebar.sidebar-mobile-open .nav-item-text,
-  .sidebar.sidebar-mobile-open .footer-info,
-  .sidebar.sidebar-mobile-open .logout-text {
-    opacity: 1;
-    width: auto;
-    pointer-events: auto;
-  }
-  .sidebar.sidebar-mobile-open .sidebar-top {
-    flex-direction: row;
-  }
-  .sidebar.sidebar-mobile-open .logo-container {
-    padding: 0.25rem 0.5rem;
-  }
-  .sidebar.sidebar-mobile-open .nav-item {
-    justify-content: flex-start;
-    padding: 0.75rem 0.85rem;
-  }
-  .sidebar.sidebar-mobile-open .logout-btn {
-    justify-content: flex-start;
-    padding: 0.7rem 0.85rem;
-  }
-  .main-content {
-    margin-left: 0;
-    padding: 1.25rem;
-    padding-top: 4.5rem;
-  }
-  .metrics-grid {
-    grid-template-columns: 1fr;
-  }
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-  .btn {
-    width: 100%;
-  }
-}
-
-/* ====================== */
-/*   Login Page (Compact)  */
-/* ====================== */
-.login-page {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 1rem;
-}
-
-.login-card {
-  width: 100%;
-  max-width: 380px;
-  text-align: center;
-  padding: 2.5rem 2rem;
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.login-card:hover {
-  transform: none;
-}
-
-.login-logo-icon {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 1rem;
-  border-radius: var(--border-radius-sm);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 800;
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  box-shadow: 0 0 24px rgba(99, 102, 241, 0.4);
-}
-
-.login-title {
-  font-size: 1.35rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
-  background: linear-gradient(135deg, #fff, #94a3b8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.login-subtitle {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-bottom: 1.5rem;
-}
-
-.login-error {
-  color: var(--color-danger);
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
-  padding: 0.5rem 0.75rem;
-  background: var(--color-danger-glow);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  border-radius: var(--border-radius-sm);
-}
-
-.login-form {
-  text-align: left;
-}
-
-.login-btn {
-  width: 100%;
-  margin-top: 0.5rem;
-}
