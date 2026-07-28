@@ -554,12 +554,7 @@ const CreateInvoice = () => {
     ? products
     : products.filter((p) => (p.stock > 0) || (p.totalPurchased > 0));
 
-  const productOptions = displayedProducts.map((p) => {
-    return {
-      value: p.name,
-      label: `${toProper(p.name)} (Stock: ${p.stock || 0})`,
-    };
-  });
+  const productOptions = [...new Set(displayedProducts.map((p) => toProper(p.name)))].filter(Boolean);
   const customerOptions = combinedCustomers.map((c) => toProper(c.name));
 
   const selectedCompanyObj = companies.find(c => c._id === form.company);
@@ -811,17 +806,17 @@ const CreateInvoice = () => {
               <table className="ci-items-table">
                 <thead>
                   <tr>
-                    <th style={{ minWidth: "220px" }}>PRODUCT</th>
-                    <th style={{ width: "100px" }}>HSN</th>
-                    <th style={{ width: "80px" }}>UNIT</th>
-                    <th style={{ width: "90px" }}>QTY</th>
-                    <th style={{ width: "120px" }}>RATE (₹)</th>
-                    <th style={{ width: "110px" }}>MRP (₹)</th>
-                    <th style={{ width: "80px" }}>DISC %</th>
+                    <th style={{ minWidth: "260px" }}>PRODUCT</th>
+                    <th style={{ width: "80px" }}>HSN</th>
+                    <th style={{ width: "60px" }}>UNIT</th>
+                    <th style={{ width: "70px" }}>QTY</th>
+                    <th style={{ width: "100px" }}>RATE (₹)</th>
+                    <th style={{ width: "100px" }}>MRP (₹)</th>
+                    <th style={{ width: "70px" }}>DISC %</th>
                     <th style={{ width: "80px" }}>GST %</th>
-                    <th style={{ width: "70px", textAlign: "center" }}>INCL?</th>
-                    <th style={{ width: "130px" }}>TOTAL (₹)</th>
-                    <th style={{ width: "70px" }}>ACTION</th>
+                    <th style={{ width: "60px", textAlign: "center" }}>INCL?</th>
+                    <th style={{ width: "110px" }}>TOTAL (₹)</th>
+                    <th style={{ width: "60px" }}>ACTION</th>
                   </tr>
                 </thead>
                 <tbody>

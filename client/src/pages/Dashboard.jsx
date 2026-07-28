@@ -13,6 +13,8 @@ const Dashboard = () => {
   const authHeader = { Authorization: `Bearer ${userInfo?.token}` };
 
   const [totalCompanies, setTotalCompanies] = useState(0);
+  const [companies, setCompanies] = useState([]);
+  const [excludeInternalTransfers, setExcludeInternalTransfers] = useState(false);
   const [totalProfit, setTotalProfit] = useState(0);
   const [totalSales, setTotalSales] = useState(0);
   const [totalPurchases, setTotalPurchases] = useState(0);
@@ -41,69 +43,9 @@ const Dashboard = () => {
         ]);
 
         setTotalCompanies(compRes.data.length);
+        setCompanies(compRes.data);
         setAllInvoices(profitRes.data);
         setAllPurchases(purchaseRes.data);
-
-        // Sum up total profit, sales, transport, and commission from the profit report
-        const reportData = profitRes.data;
-        const totalP = reportData.reduce((sum, inv) => sum + (inv.finalProfit || 0), 0);
-        const totalS = reportData.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
-        const totalT = reportData.reduce((sum, inv) => sum + (inv.transportCharges || 0), 0);
-        const totalC = reportData.reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
-        const totalPaidC = reportData
-          .filter((inv) => inv.commissionStatus === "Paid")
-          .reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
-
-        setTotalProfit(totalP);
-        setTotalSales(totalS);
-        setTotalTransport(totalT);
-        setTotalCommission(totalC);
-        setTotalPaidCommission(totalPaidC);
-
-        // Sum up total purchases
-        const purchasesData = purchaseRes.data;
-        const totalPurch = purchasesData.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
-        setTotalPurchases(totalPurch);
-
-        // Group statistics by company for breakdown
-        const compList = compRes.data;
-        const breakdown = compList.map((comp) => {
-          const compId = comp._id;
-
-          // Filter invoices for this company
-          const compInvoices = reportData.filter((inv) => {
-            const invCompId = inv.company?._id || inv.company;
-            return String(invCompId) === String(compId);
-          });
-
-          // Filter purchases for this company
-          const compPurchases = purchasesData.filter((p) => {
-            const pCompId = p.targetCompany?._id || p.targetCompany;
-            return String(pCompId) === String(compId);
-          });
-
-          const profit = compInvoices.reduce((sum, inv) => sum + (inv.finalProfit || 0), 0);
-          const revenue = compInvoices.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
-          const transport = compInvoices.reduce((sum, inv) => sum + (inv.transportCharges || 0), 0);
-          const commission = compInvoices.reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
-          const paidCommission = compInvoices
-            .filter((inv) => inv.commissionStatus === "Paid")
-            .reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
-          const purchases = compPurchases.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
-
-          return {
-            companyId: compId,
-            companyName: comp.name,
-            profit,
-            revenue,
-            purchases,
-            transport,
-            commission,
-            paidCommission,
-          };
-        });
-
-        setCompanyBreakdown(breakdown);
       } catch (err) {
         console.error("Dashboard fetch error", err);
       } finally {
@@ -113,6 +55,75 @@ const Dashboard = () => {
 
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    // Filter invoices and purchases based on toggle
+    const filteredInvoices = excludeInternalTransfers
+      ? allInvoices.filter((inv) => !inv.invoiceNumber?.startsWith("TRF-OUT-"))
+      : allInvoices;
+
+    const filteredPurchases = excludeInternalTransfers
+      ? allPurchases.filter((p) => !p.billNumber?.startsWith("TRF-IN-"))
+      : allPurchases;
+
+    // Sum up total profit, sales, transport, and commission from the profit report
+    const totalP = filteredInvoices.reduce((sum, inv) => sum + (inv.finalProfit || 0), 0);
+    const totalS = filteredInvoices.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
+    const totalT = filteredInvoices.reduce((sum, inv) => sum + (inv.transportCharges || 0), 0);
+    const totalC = filteredInvoices.reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
+    const totalPaidC = filteredInvoices
+      .filter((inv) => inv.commissionStatus === "Paid")
+      .reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
+
+    setTotalProfit(totalP);
+    setTotalSales(totalS);
+    setTotalTransport(totalT);
+    setTotalCommission(totalC);
+    setTotalPaidCommission(totalPaidC);
+
+    // Sum up total purchases
+    const totalPurch = filteredPurchases.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
+    setTotalPurchases(totalPurch);
+
+    // Group statistics by company for breakdown
+    const breakdown = companies.map((comp) => {
+      const compId = comp._id;
+
+      // Filter invoices for this company
+      const compInvoices = filteredInvoices.filter((inv) => {
+        const invCompId = inv.company?._id || inv.company;
+        return String(invCompId) === String(compId);
+      });
+
+      // Filter purchases for this company
+      const compPurchases = filteredPurchases.filter((p) => {
+        const pCompId = p.targetCompany?._id || p.targetCompany;
+        return String(pCompId) === String(compId);
+      });
+
+      const profit = compInvoices.reduce((sum, inv) => sum + (inv.finalProfit || 0), 0);
+      const revenue = compInvoices.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
+      const transport = compInvoices.reduce((sum, inv) => sum + (inv.transportCharges || 0), 0);
+      const commission = compInvoices.reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
+      const paidCommission = compInvoices
+        .filter((inv) => inv.commissionStatus === "Paid")
+        .reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
+      const purchases = compPurchases.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
+
+      return {
+        companyId: compId,
+        companyName: comp.name,
+        profit,
+        revenue,
+        purchases,
+        transport,
+        commission,
+        paidCommission,
+      };
+    });
+
+    setCompanyBreakdown(breakdown);
+  }, [allInvoices, allPurchases, companies, excludeInternalTransfers]);
 
   const isSuperAdmin = userInfo?.role === "Super Admin";
 
@@ -169,13 +180,47 @@ const Dashboard = () => {
 
   return (
     <div className="sl-page">
-      <div className="sl-header">
+      <div className="sl-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <h1 className="sl-title">Dashboard</h1>
           <p className="sl-subtitle">
             {isSuperAdmin ? "Overview across all your registered companies" : "Overview of your company"}
           </p>
         </div>
+        {isSuperAdmin && (
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", background: "rgba(30, 41, 59, 0.5)", padding: "10px 16px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <span style={{ color: "#94a3b8", fontSize: "0.9rem", fontWeight: 500 }}>Exclude Internal Transfers</span>
+            <label className="switch" style={{ position: "relative", display: "inline-block", width: "46px", height: "24px" }}>
+              <input
+                type="checkbox"
+                checked={excludeInternalTransfers}
+                onChange={(e) => setExcludeInternalTransfers(e.target.checked)}
+                style={{ opacity: 0, width: 0, height: 0 }}
+              />
+              <span style={{
+                position: "absolute",
+                cursor: "pointer",
+                top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: excludeInternalTransfers ? "#3b82f6" : "#475569",
+                transition: "0.3s",
+                borderRadius: "24px"
+              }}>
+                <span style={{
+                  position: "absolute",
+                  content: '""',
+                  height: "18px",
+                  width: "18px",
+                  left: "3px",
+                  bottom: "3px",
+                  backgroundColor: "white",
+                  transition: "0.3s",
+                  borderRadius: "50%",
+                  transform: excludeInternalTransfers ? "translateX(22px)" : "translateX(0)"
+                }} />
+              </span>
+            </label>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -577,14 +622,22 @@ const Dashboard = () => {
       {/* Detailed Company Customer/Vendor Breakdown Modal */}
       {selectedCompanyForBreakdown &&
         (() => {
+          const filteredInvoices = excludeInternalTransfers
+            ? allInvoices.filter((inv) => !inv.invoiceNumber?.startsWith("TRF-OUT-"))
+            : allInvoices;
+
+          const filteredPurchases = excludeInternalTransfers
+            ? allPurchases.filter((p) => !p.billNumber?.startsWith("TRF-IN-"))
+            : allPurchases;
+
           // Filter invoices for this company
-          const compInvoicesForModal = allInvoices.filter((inv) => {
+          const compInvoicesForModal = filteredInvoices.filter((inv) => {
             const invCompId = inv.company?._id || inv.company;
             return String(invCompId) === String(selectedCompanyForBreakdown.companyId);
           });
 
           // Filter purchases for this company
-          const compPurchasesForModal = allPurchases.filter((p) => {
+          const compPurchasesForModal = filteredPurchases.filter((p) => {
             const pCompId = p.targetCompany?._id || p.targetCompany;
             return String(pCompId) === String(selectedCompanyForBreakdown.companyId);
           });

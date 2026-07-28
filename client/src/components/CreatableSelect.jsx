@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Plus, Search, Check, Globe } from "lucide-react";
 import "./CreatableSelect.css";
 
@@ -19,8 +20,20 @@ const toProperCase = (str) => {
 const CreatableSelect = ({ value, onChange, options = [], placeholder = "Search or create…", onCreateOption }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
   const inputRef = useRef(null);
   const containerRef = useRef(null);
+
+  const updateCoords = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.bottom,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+  };
 
   // Close when clicking outside
   useEffect(() => {
@@ -34,10 +47,22 @@ const CreatableSelect = ({ value, onChange, options = [], placeholder = "Search 
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    updateCoords();
+    window.addEventListener("scroll", updateCoords, true);
+    window.addEventListener("resize", updateCoords);
+    return () => {
+      window.removeEventListener("scroll", updateCoords, true);
+      window.removeEventListener("resize", updateCoords);
+    };
+  }, [open]);
+
   // When opening, focus the search input
   const handleOpen = () => {
     setOpen(true);
     setQuery("");
+    updateCoords();
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
@@ -91,9 +116,18 @@ const CreatableSelect = ({ value, onChange, options = [], placeholder = "Search 
         <ChevronDown size={16} className={`cs-chevron ${open ? "rotated" : ""}`} />
       </button>
 
-      {/* Dropdown */}
-      {open && (
-        <div className="cs-dropdown">
+      {/* Dropdown in Portal */}
+      {open && createPortal(
+        <div
+          className="cs-dropdown"
+          style={{
+            position: "fixed",
+            top: `${coords.top + 4}px`,
+            left: `${coords.left}px`,
+            width: `${coords.width}px`,
+            zIndex: 99999,
+          }}
+        >
           {/* Search */}
           <div className="cs-search-row">
             <Search size={14} className="cs-search-icon" />
@@ -149,7 +183,8 @@ const CreatableSelect = ({ value, onChange, options = [], placeholder = "Search 
               <div className="cs-empty">No options yet. Type to create one.</div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
