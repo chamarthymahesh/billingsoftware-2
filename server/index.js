@@ -11,6 +11,7 @@ import customerRoutes from "./routes/customerRoutes.js";
 import supplierRoutes from "./routes/supplierRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import personalFinanceRoutes from "./routes/personalFinanceRoutes.js";
+import employeeRoutes from "./routes/employeeRoutes.js";
 import { protect } from "./middleware/authMiddleware.js";
 
 dotenv.config();
@@ -36,6 +37,7 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/suppliers", supplierRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/personal", protect, personalFinanceRoutes);
+app.use("/api/employees", protect, employeeRoutes);
 
 // Basic route
 app.get("/", (req, res) => {

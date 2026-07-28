@@ -51,6 +51,7 @@ const Sidebar = () => {
     { name: "Global Stock", path: "/global-stock", icon: Layers },
     { name: "Stock Adjustment", path: "/stock-adjustment", icon: Scale },
     { name: "GSTR-1 Report", path: "/gstr1", icon: FileText },
+    { name: "Staff & Salaries", path: "/employees", icon: Users },
   ];
 
   const personalNavItems = [

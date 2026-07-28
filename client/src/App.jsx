@@ -15,6 +15,7 @@ import GSTR1Report from "./pages/GSTR1Report";
 import GlobalStock from "./pages/GlobalStock";
 import StockAdjustment from "./pages/StockAdjustment";
 import UserRoles from "./pages/UserRoles";
+import Employees from "./pages/Employees";
 
 // Personal Finance Imports
 import Landing from "./components/personal/Landing";
@@ -79,6 +80,7 @@ function App() {
           <Route path="stock-adjustment" element={<StockAdjustment />} />
           <Route path="gstr1" element={<GSTR1Report />} />
           <Route path="user-roles" element={<UserRoles />} />
+          <Route path="employees" element={<Employees />} />
         </Route>
 
         {/* Protected Personal Finance Routes */}
