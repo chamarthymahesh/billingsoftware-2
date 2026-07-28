@@ -9,17 +9,36 @@ connectDB();
 
 const seedSuperAdmin = async () => {
   try {
-    await User.deleteMany(); // Clear existing users
+    // Upsert Super Admin
+    const existingSuper = await User.findOne({ email: 'admin@billbook.com' });
+    if (!existingSuper) {
+      const superAdmin = new User({
+        name: 'Super Admin',
+        email: 'admin@billbook.com',
+        password: 'Nehaal@2026',
+        role: 'Super Admin',
+      });
+      await superAdmin.save();
+      console.log('Super Admin User Created!');
+    } else {
+      console.log('Super Admin User already exists.');
+    }
 
-    const superAdmin = new User({
-      name: 'Super Admin',
-      email: 'admin@billbook.com',
-      password: 'password123',
-      role: 'Super Admin',
-    });
+    // Upsert Personal Admin
+    const existingPersonal = await User.findOne({ email: 'admin@mahesh.com' });
+    if (!existingPersonal) {
+      const personalAdmin = new User({
+        name: 'Mahesh Personal',
+        email: 'admin@mahesh.com',
+        password: 'Mahesh@2026',
+        role: 'Personal Admin',
+      });
+      await personalAdmin.save();
+      console.log('Personal Admin User Created!');
+    } else {
+      console.log('Personal Admin User already exists.');
+    }
 
-    await superAdmin.save();
-    console.log('Super Admin User Created!');
     process.exit();
   } catch (error) {
     console.error(`Error: ${error.message}`);

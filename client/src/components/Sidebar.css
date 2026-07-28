@@ -147,3 +147,38 @@
   background-color: rgba(239, 68, 68, 0.2);
   color: #f87171;
 }
+
+/* App Mode Switcher */
+.app-mode-switcher {
+  display: flex;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 0.25rem;
+  margin-bottom: 1.5rem;
+  gap: 0.25rem;
+}
+
+.switcher-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #94A3B8;
+  padding: 0.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.switcher-tab:hover {
+  color: #F8FAFC;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.switcher-tab.active {
+  background: rgba(99, 102, 241, 0.2);
+  color: #818CF8;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}

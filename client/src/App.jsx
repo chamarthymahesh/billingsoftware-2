@@ -15,12 +15,43 @@ import GSTR1Report from "./pages/GSTR1Report";
 import GlobalStock from "./pages/GlobalStock";
 import StockAdjustment from "./pages/StockAdjustment";
 import UserRoles from "./pages/UserRoles";
+
+// Personal Finance Imports
+import Landing from "./components/personal/Landing";
+import DashboardPersonal from "./components/personal/Dashboard";
+import Bills from "./components/personal/Bills";
+import Insurances from "./components/personal/Insurances";
+import Loans from "./components/personal/Loans";
+import Construction from "./components/personal/Construction";
+import Debts from "./components/personal/Debts";
+import Cars from "./components/personal/Cars";
+import Rentals from "./components/personal/Rentals";
+import Transfers from "./components/personal/Transfers";
+import ReportsPersonal from "./components/personal/Reports";
+import AdminSettings from "./components/personal/AdminSettings";
+
 import "./App.css";
 
-const ProtectedRoute = () => {
+const ProtectedRoute = ({ allowedRole }) => {
   const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-  if (userInfo) return <Layout />;
-  return <Navigate to="/login" />;
+  if (!userInfo) return <Navigate to="/login" />;
+
+  if (allowedRole === "personal" && userInfo.role !== "Personal Admin") {
+    return <Navigate to="/dashboard" />;
+  }
+  if (allowedRole === "billing" && userInfo.role === "Personal Admin") {
+    return <Navigate to="/personal/home" />;
+  }
+
+  return <Layout />;
+};
+
+const IndexRedirect = () => {
+  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+  if (userInfo?.role === "Personal Admin") {
+    return <Navigate to="/personal/home" />;
+  }
+  return <Navigate to="/dashboard" />;
 };
 
 function App() {
@@ -29,9 +60,9 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
 
-        {/* Protected Routes wrapped in Layout */}
-        <Route path="/" element={<ProtectedRoute />}>
-          <Route index element={<Navigate to="/dashboard" />} />
+        {/* Protected Billing Routes */}
+        <Route path="/" element={<ProtectedRoute allowedRole="billing" />}>
+          <Route index element={<IndexRedirect />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="companies" element={<Companies />} />
           <Route path="products" element={<Products />} />
@@ -48,6 +79,22 @@ function App() {
           <Route path="stock-adjustment" element={<StockAdjustment />} />
           <Route path="gstr1" element={<GSTR1Report />} />
           <Route path="user-roles" element={<UserRoles />} />
+        </Route>
+
+        {/* Protected Personal Finance Routes */}
+        <Route path="/" element={<ProtectedRoute allowedRole="personal" />}>
+          <Route path="personal/home" element={<Landing />} />
+          <Route path="personal/dashboard" element={<DashboardPersonal />} />
+          <Route path="personal/bills" element={<Bills />} />
+          <Route path="personal/insurances" element={<Insurances />} />
+          <Route path="personal/loans" element={<Loans />} />
+          <Route path="personal/construction" element={<Construction />} />
+          <Route path="personal/debts" element={<Debts />} />
+          <Route path="personal/transfers" element={<Transfers />} />
+          <Route path="personal/cars" element={<Cars />} />
+          <Route path="personal/rentals" element={<Rentals />} />
+          <Route path="personal/reports" element={<ReportsPersonal />} />
+          <Route path="personal/settings" element={<AdminSettings />} />
         </Route>
       </Routes>
     </Router>
