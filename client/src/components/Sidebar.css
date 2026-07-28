@@ -128,7 +128,7 @@
 
 /* Logout Button */
 .logout-btn {
-  margin-top: auto; /* Pushes the button to the bottom */
+  margin-top: 2rem; /* Static margin to allow correct scrolling on small viewports */
   display: flex;
   align-items: center;
   gap: 1rem;
