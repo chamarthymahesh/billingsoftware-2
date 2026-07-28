@@ -9,7 +9,7 @@
   flex-direction: column;
   padding: 1.5rem 1rem;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
-  overflow: hidden;
+  overflow-y: auto;
   z-index: 1000;
 }
 
@@ -64,10 +64,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  overflow-y: auto;
-  flex: 1;
   margin-bottom: 1.5rem;
-  padding-right: 0.25rem;
 }
 
 .nav-link {
@@ -120,11 +117,11 @@
   border-radius: 0 4px 4px 0;
 }
 
-/* Scrollbar styling for navigation menu */
-.nav-menu::-webkit-scrollbar {
+/* Scrollbar styling for sidebar container */
+.sidebar::-webkit-scrollbar {
   width: 4px;
 }
-.nav-menu::-webkit-scrollbar-thumb {
+.sidebar::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
