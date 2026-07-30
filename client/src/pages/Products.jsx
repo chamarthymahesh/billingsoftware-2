@@ -226,18 +226,17 @@ const Products = () => {
               {/* ── Basic Info ── */}
               <div className="pr-section-title"><Tag size={14} /> Basic Information</div>
               <div className="pr-grid-2">
-                {/* Product Name – CreatableSelect */}
+                {/* Product Name – Simple Text Input */}
                 <div className="pr-field span-2">
                   <label>Product Name * <span className="pr-hint">(Proper Case)</span></label>
-                  <CreatableSelect
+                  <input
+                    type="text"
+                    name="name"
+                    required
                     value={form.name}
-                    onChange={handleSelectChange('name')}
-                    options={productNames}
-                    placeholder="Search or create product name…"
+                    onChange={handleInput}
+                    placeholder="Enter product name…"
                   />
-                  {/* Hidden input to make form validation work */}
-                  <input type="text" required value={form.name} onChange={() => {}}
-                    style={{ position:'absolute', opacity:0, height:0, pointerEvents:'none' }} />
                 </div>
 
                 {/* Brand – CreatableSelect */}

@@ -23,6 +23,7 @@ const CreatableSelect = ({ value, onChange, options = [], placeholder = "Search 
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
   const inputRef = useRef(null);
   const containerRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   const updateCoords = () => {
     if (containerRef.current) {
@@ -38,7 +39,11 @@ const CreatableSelect = ({ value, onChange, options = [], placeholder = "Search 
   // Close when clicking outside
   useEffect(() => {
     const handler = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target) &&
+        (!dropdownRef.current || !dropdownRef.current.contains(e.target))
+      ) {
         setOpen(false);
         setQuery("");
       }
@@ -119,6 +124,7 @@ const CreatableSelect = ({ value, onChange, options = [], placeholder = "Search 
       {/* Dropdown in Portal */}
       {open && createPortal(
         <div
+          ref={dropdownRef}
           className="cs-dropdown"
           style={{
             position: "fixed",
@@ -143,7 +149,7 @@ const CreatableSelect = ({ value, onChange, options = [], placeholder = "Search 
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  if (filtered.length > 0) select(filtered[0]);
+                  if (filtered.length > 0) select(filtered[0].value);
                   else if (properQuery) createNew();
                 }
                 if (e.key === "Escape") {
