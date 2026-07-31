@@ -71,6 +71,10 @@ const Products = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.name || !form.name.trim()) {
+      alert('Product Name is required');
+      return;
+    }
     const payload = {
       ...form,
       name:     toProperCase(form.name),
@@ -226,16 +230,14 @@ const Products = () => {
               {/* ── Basic Info ── */}
               <div className="pr-section-title"><Tag size={14} /> Basic Information</div>
               <div className="pr-grid-2">
-                {/* Product Name – Simple Text Input */}
+                {/* Product Name – CreatableSelect */}
                 <div className="pr-field span-2">
                   <label>Product Name * <span className="pr-hint">(Proper Case)</span></label>
-                  <input
-                    type="text"
-                    name="name"
-                    required
+                  <CreatableSelect
                     value={form.name}
-                    onChange={handleInput}
-                    placeholder="Enter product name…"
+                    onChange={handleSelectChange('name')}
+                    options={productNames}
+                    placeholder="Search or create product name…"
                   />
                 </div>
 
