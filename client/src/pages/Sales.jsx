@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Plus, TrendingUp, DollarSign, FileText, CheckCircle, Search, Eye, Edit, Trash2 } from "lucide-react";
+import { Plus, TrendingUp, DollarSign, FileText, CheckCircle, Search, Eye, Edit, Trash2, Truck } from "lucide-react";
 import "./Sales.css";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -295,6 +295,11 @@ const Sales = () => {
                   <td>{s.invoiceDate ? new Date(s.invoiceDate).toLocaleDateString("en-IN") : "-"}</td>
                   <td>
                     <span className="sl-code">{s.invoiceNumber || "-"}</span>
+                    {s.isStockTransfer && (
+                      <span style={{ display: "inline-block", background: "rgba(59, 130, 246, 0.15)", color: "#60a5fa", fontSize: "10px", fontWeight: "bold", padding: "2px 6px", borderRadius: "4px", marginLeft: "6px" }}>
+                        Stock Transfer
+                      </span>
+                    )}
                   </td>
                   <td>
                     <span className="sl-code" style={{ fontSize: "0.85rem", color: "#94a3b8" }}>
@@ -333,6 +338,19 @@ const Sales = () => {
                         title="View"
                       >
                         <Eye size={18} />
+                      </button>
+                      <button
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: "#10b981",
+                          cursor: "pointer",
+                          padding: 0,
+                        }}
+                        onClick={() => navigate(`/delivery-challans/new?fromInvoice=${s._id}`)}
+                        title="Convert to Delivery Challan"
+                      >
+                        <Truck size={18} />
                       </button>
                       <button
                         style={{

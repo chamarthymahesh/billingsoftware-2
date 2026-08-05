@@ -15,6 +15,11 @@ const Dashboard = () => {
   const [totalCompanies, setTotalCompanies] = useState(0);
   const [companies, setCompanies] = useState([]);
   const [excludeInternalTransfers, setExcludeInternalTransfers] = useState(false);
+  const [dashboardMonth, setDashboardMonth] = useState('');
+  const [dashboardYear, setDashboardYear] = useState('');
+  const [dashboardTimeRange, setDashboardTimeRange] = useState('all'); // 'all', 'today', 'yesterday', '7days', '30days', 'thisMonth', 'lastMonth', 'custom'
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [totalProfit, setTotalProfit] = useState(0);
   const [totalSales, setTotalSales] = useState(0);
   const [totalPurchases, setTotalPurchases] = useState(0);
@@ -57,14 +62,73 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    // Filter invoices and purchases based on toggle
-    const filteredInvoices = excludeInternalTransfers
-      ? allInvoices.filter((inv) => !inv.invoiceNumber?.startsWith("TRF-OUT-"))
-      : allInvoices;
+    const applyDateFilters = (itemDateStr) => {
+      if (!itemDateStr) return true;
+      const itemDate = new Date(itemDateStr);
+      
+      // 1. Time range filter
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      if (dashboardTimeRange === 'today') {
+        if (itemDate < todayStart) return false;
+      } else if (dashboardTimeRange === 'yesterday') {
+        const yesterdayStart = new Date(todayStart);
+        yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+        if (itemDate < yesterdayStart || itemDate >= todayStart) return false;
+      } else if (dashboardTimeRange === '7days') {
+        const sevenDaysAgo = new Date(todayStart);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        if (itemDate < sevenDaysAgo) return false;
+      } else if (dashboardTimeRange === '30days') {
+        const thirtyDaysAgo = new Date(todayStart);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        if (itemDate < thirtyDaysAgo) return false;
+      } else if (dashboardTimeRange === 'thisMonth') {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        if (itemDate < startOfMonth) return false;
+      } else if (dashboardTimeRange === 'lastMonth') {
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        if (itemDate < startOfLastMonth || itemDate > endOfLastMonth) return false;
+      } else if (dashboardTimeRange === 'custom') {
+        if (customStartDate) {
+          const start = new Date(customStartDate);
+          start.setHours(0, 0, 0, 0);
+          if (itemDate < start) return false;
+        }
+        if (customEndDate) {
+          const end = new Date(customEndDate);
+          end.setHours(23, 59, 59, 999);
+          if (itemDate > end) return false;
+        }
+      }
 
-    const filteredPurchases = excludeInternalTransfers
-      ? allPurchases.filter((p) => !p.billNumber?.startsWith("TRF-IN-"))
-      : allPurchases;
+      // 2. Month filter
+      if (dashboardMonth) {
+        const m = itemDate.getMonth() + 1; // 1-12
+        if (String(m) !== String(dashboardMonth)) return false;
+      }
+
+      // 3. Year filter
+      if (dashboardYear) {
+        const y = itemDate.getFullYear();
+        if (String(y) !== String(dashboardYear)) return false;
+      }
+
+      return true;
+    };
+
+    // Filter invoices and purchases based on toggle and date filters
+    const filteredInvoices = allInvoices.filter((inv) => {
+      if (excludeInternalTransfers && (inv.invoiceNumber?.startsWith("TRF-OUT-") || inv.isStockTransfer)) return false;
+      return applyDateFilters(inv.invoiceDate);
+    });
+
+    const filteredPurchases = allPurchases.filter((p) => {
+      if (excludeInternalTransfers && p.billNumber?.startsWith("TRF-IN-")) return false;
+      return applyDateFilters(p.purchaseDate || p.createdAt);
+    });
 
     // Sum up total profit, sales, transport, and commission from the profit report
     const totalP = filteredInvoices.reduce((sum, inv) => sum + (inv.finalProfit || 0), 0);
@@ -85,33 +149,29 @@ const Dashboard = () => {
     const totalPurch = filteredPurchases.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
     setTotalPurchases(totalPurch);
 
-    // Group statistics by company for breakdown
+    // Calculate company breakdowns
     const breakdown = companies.map((comp) => {
-      const compId = comp._id;
-
-      // Filter invoices for this company
+      const compId = comp._id.toString();
       const compInvoices = filteredInvoices.filter((inv) => {
         const invCompId = inv.company?._id || inv.company;
-        return String(invCompId) === String(compId);
+        return invCompId?.toString() === compId;
       });
-
-      // Filter purchases for this company
       const compPurchases = filteredPurchases.filter((p) => {
         const pCompId = p.targetCompany?._id || p.targetCompany;
-        return String(pCompId) === String(compId);
+        return pCompId?.toString() === compId;
       });
 
       const profit = compInvoices.reduce((sum, inv) => sum + (inv.finalProfit || 0), 0);
       const revenue = compInvoices.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
+      const purchases = compPurchases.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
       const transport = compInvoices.reduce((sum, inv) => sum + (inv.transportCharges || 0), 0);
       const commission = compInvoices.reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
       const paidCommission = compInvoices
         .filter((inv) => inv.commissionStatus === "Paid")
         .reduce((sum, inv) => sum + (inv.commissionAmount || 0), 0);
-      const purchases = compPurchases.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
 
       return {
-        companyId: compId,
+        companyId: comp._id,
         companyName: comp.name,
         profit,
         revenue,
@@ -123,7 +183,7 @@ const Dashboard = () => {
     });
 
     setCompanyBreakdown(breakdown);
-  }, [allInvoices, allPurchases, companies, excludeInternalTransfers]);
+  }, [allInvoices, allPurchases, companies, excludeInternalTransfers, dashboardMonth, dashboardYear, dashboardTimeRange, customStartDate, customEndDate]);
 
   const isSuperAdmin = userInfo?.role === "Super Admin";
 
@@ -229,6 +289,182 @@ const Dashboard = () => {
         </div>
       ) : (
         <>
+          {/* Dashboard Filters */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '16px',
+              alignItems: 'center',
+              background: 'rgba(30, 41, 59, 0.4)',
+              border: '1px solid rgba(255,255,255,0.05)',
+              padding: '16px 20px',
+              borderRadius: '12px',
+              marginBottom: '20px',
+              flexWrap: 'wrap',
+              marginTop: '10px'
+            }}
+          >
+            {/* Time Range Filter */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Time Range</label>
+              <select
+                value={dashboardTimeRange}
+                onChange={(e) => setDashboardTimeRange(e.target.value)}
+                style={{
+                  background: '#1e293b',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  minWidth: '150px',
+                }}
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="7days">Last 7 Days</option>
+                <option value="30days">Last 30 Days</option>
+                <option value="thisMonth">This Month</option>
+                <option value="lastMonth">Last Month</option>
+                <option value="custom">Custom Range</option>
+              </select>
+            </div>
+
+            {/* Month Filter */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Month</label>
+              <select
+                value={dashboardMonth}
+                onChange={(e) => setDashboardMonth(e.target.value)}
+                style={{
+                  background: '#1e293b',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  minWidth: '130px',
+                }}
+              >
+                <option value="">All Months</option>
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+              </select>
+            </div>
+
+            {/* Year Filter */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Year</label>
+              <select
+                value={dashboardYear}
+                onChange={(e) => setDashboardYear(e.target.value)}
+                style={{
+                  background: '#1e293b',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  minWidth: '100px',
+                }}
+              >
+                <option value="">All Years</option>
+                {Array.from(new Set([...allInvoices, ...allPurchases].map(item => {
+                  const d = item.invoiceDate || item.purchaseDate || item.createdAt;
+                  return d ? new Date(d).getFullYear() : null;
+                }).filter(Boolean))).sort((a,b) => b - a).map((yr, idx) => (
+                  <option key={idx} value={yr}>{yr}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Custom Date Range Fields */}
+            {dashboardTimeRange === 'custom' && (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Start Date</label>
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    style={{
+                      background: '#1e293b',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '8px',
+                      padding: '7px 12px',
+                      color: '#fff',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>End Date</label>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    style={{
+                      background: '#1e293b',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '8px',
+                      padding: '7px 12px',
+                      color: '#fff',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Clear Button */}
+            {(dashboardMonth || dashboardYear || dashboardTimeRange !== 'all' || customStartDate || customEndDate) && (
+              <button
+                onClick={() => {
+                  setDashboardMonth('');
+                  setDashboardYear('');
+                  setDashboardTimeRange('all');
+                  setCustomStartDate('');
+                  setCustomEndDate('');
+                }}
+                style={{
+                  alignSelf: 'flex-end',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  color: '#f87171',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+
           <div className="sl-stats" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
             {isSuperAdmin && (
               <div className="sl-stat">
@@ -623,7 +859,7 @@ const Dashboard = () => {
       {selectedCompanyForBreakdown &&
         (() => {
           const filteredInvoices = excludeInternalTransfers
-            ? allInvoices.filter((inv) => !inv.invoiceNumber?.startsWith("TRF-OUT-"))
+            ? allInvoices.filter((inv) => !inv.invoiceNumber?.startsWith("TRF-OUT-") && !inv.isStockTransfer)
             : allInvoices;
 
           const filteredPurchases = excludeInternalTransfers

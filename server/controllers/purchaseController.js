@@ -289,9 +289,12 @@ export const transferStock = async (req, res) => {
 
     // Create a Sales Invoice in the source company
     console.log("Creating Sales Invoice for source company:", sourceCompanyId);
+    const invoiceCount = await Invoice.countDocuments({ company: sourceCompanyId });
+    const nextInvoiceNumber = `INV-${String(invoiceCount + 1).padStart(4, '0')}`;
+
     const salesInvoice = new Invoice({
       company: sourceCompanyId,
-      invoiceNumber: `TRF-OUT-${Date.now()}`,
+      invoiceNumber: nextInvoiceNumber,
       invoiceDate: new Date(),
       paymentStatus: "Paid",
       paymentMethod: "Cash",
@@ -303,6 +306,7 @@ export const transferStock = async (req, res) => {
       totalTax: taxAmount,
       grandTotal: Math.round(total),
       materialDeliveryStatus: "Delivered",
+      isStockTransfer: true,
       items: [
         {
           product: product._id,
@@ -326,7 +330,7 @@ export const transferStock = async (req, res) => {
       targetCompany: targetCompanyId,
       supplierName: sourceCompanyObj.name,
       supplierGSTIN: sourceCompanyObj.gstin || "",
-      billNumber: `TRF-IN-${Date.now()}`,
+      billNumber: nextInvoiceNumber,
       purchaseDate: new Date(),
       paymentStatus: "Paid",
       itemsTotal: total,

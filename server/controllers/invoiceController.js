@@ -64,6 +64,8 @@ const createInvoice = async (req, res) => {
       adjustment,
       grandTotal,
       notes, termsConditions,
+      isStockTransfer,
+      bankDetails,
     } = req.body;
 
     console.log("createInvoice incoming body:", req.body);
@@ -129,6 +131,8 @@ const createInvoice = async (req, res) => {
       grandTotal: calculatedGrandTotal,
       notes: notes || '',
       termsConditions: termsConditions || '',
+      isStockTransfer: Boolean(isStockTransfer),
+      bankDetails: bankDetails || null,
     });
 
     // Recalculate and sync stock for all products involved
@@ -194,6 +198,8 @@ const updateInvoice = async (req, res) => {
       commissionType, commissionValue, commissionAmount,
       adjustment,
       notes, termsConditions,
+      isStockTransfer,
+      bankDetails,
     } = req.body;
 
     // Keep track of old product IDs to sync them later
@@ -259,6 +265,12 @@ const updateInvoice = async (req, res) => {
     existingInvoice.grandTotal = calculatedGrandTotal;
     existingInvoice.notes = notes || existingInvoice.notes;
     existingInvoice.termsConditions = termsConditions || existingInvoice.termsConditions;
+    if (isStockTransfer !== undefined) {
+      existingInvoice.isStockTransfer = Boolean(isStockTransfer);
+    }
+    if (bankDetails !== undefined) {
+      existingInvoice.bankDetails = bankDetails;
+    }
 
     const updatedInvoice = await existingInvoice.save();
 

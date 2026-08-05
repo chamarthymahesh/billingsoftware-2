@@ -16,6 +16,12 @@ import GlobalStock from "./pages/GlobalStock";
 import StockAdjustment from "./pages/StockAdjustment";
 import UserRoles from "./pages/UserRoles";
 import Employees from "./pages/Employees";
+import Quotations from "./pages/Quotations";
+import CreateQuotation from "./pages/CreateQuotation";
+import ViewQuotation from "./pages/ViewQuotation";
+import DeliveryChallans from "./pages/DeliveryChallans";
+import CreateDeliveryChallan from "./pages/CreateDeliveryChallan";
+import ViewDeliveryChallan from "./pages/ViewDeliveryChallan";
 
 // Personal Finance Imports
 import Landing from "./components/personal/Landing";
@@ -72,6 +78,14 @@ function App() {
           <Route path="sales/new" element={<CreateInvoice />} />
           <Route path="sales/edit/:id" element={<CreateInvoice />} />
           <Route path="sales/view/:id" element={<ViewInvoice />} />
+          <Route path="quotations" element={<Quotations />} />
+          <Route path="quotations/new" element={<CreateQuotation />} />
+          <Route path="quotations/edit/:id" element={<CreateQuotation />} />
+          <Route path="quotations/view/:id" element={<ViewQuotation />} />
+          <Route path="delivery-challans" element={<DeliveryChallans />} />
+          <Route path="delivery-challans/new" element={<CreateDeliveryChallan />} />
+          <Route path="delivery-challans/edit/:id" element={<CreateDeliveryChallan />} />
+          <Route path="delivery-challans/view/:id" element={<ViewDeliveryChallan />} />
           <Route path="reports" element={<InvoiceProfitReport />} />
           <Route path="settings" element={<Settings />} />
           <Route path="settings/designer" element={<InvoiceDesigner />} />

@@ -66,7 +66,16 @@ export const getInvoiceProfitReport = asyncHandler(async (req, res) => {
     });
 
     const grossProfit = (invoice.grandTotal || 0) - totalCost;
-    const gstOnProfitPercentage = 18;
+    let gstOnProfitPercentage = 18;
+    if (invoice.items && invoice.items.length > 0) {
+      const totalTaxable = invoice.items.reduce((sum, item) => sum + (item.taxableAmount || 0), 0);
+      if (totalTaxable > 0) {
+        const weightedGstSum = invoice.items.reduce((sum, item) => sum + ((item.gstRate || 0) * (item.taxableAmount || 0)), 0);
+        gstOnProfitPercentage = weightedGstSum / totalTaxable;
+      } else {
+        gstOnProfitPercentage = invoice.items[0].gstRate !== undefined ? invoice.items[0].gstRate : 18;
+      }
+    }
     const profitAfterGst = grossProfit - (grossProfit * gstOnProfitPercentage / 100);
     const finalProfit = profitAfterGst - (invoice.transportCharges || 0) - (invoice.commissionAmount || 0) - (invoice.otherCharges || 0);
 
@@ -85,6 +94,9 @@ export const getInvoiceProfitReport = asyncHandler(async (req, res) => {
       commissionStatus: invoice.commissionStatus,
       paymentStatus: invoice.paymentStatus,
       otherCharges: invoice.otherCharges,
+      items: invoice.items,
+      gemContractNumber: invoice.gemContractNumber,
+      gstRate: gstOnProfitPercentage,
       finalProfit
     };
   });

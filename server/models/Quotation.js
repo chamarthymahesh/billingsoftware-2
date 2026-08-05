@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const invoiceItemSchema = mongoose.Schema({
+const quotationItemSchema = mongoose.Schema({
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   productName: { type: String, required: true },
   hsnCode: { type: String, default: '' },
@@ -16,15 +16,12 @@ const invoiceItemSchema = mongoose.Schema({
   total: { type: Number, default: 0 },
 });
 
-const invoiceSchema = mongoose.Schema(
+const quotationSchema = mongoose.Schema(
   {
     company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
-    invoiceNumber: { type: String, required: true },
-    invoiceDate: { type: Date, required: true },
-    gemContractNumber: { type: String, default: '' },
-    paymentStatus: { type: String, enum: ['Paid', 'Pending', 'Partial'], default: 'Pending' },
-    paymentMethod: { type: String, default: 'Cash' },
-    // Customer
+    quotationNumber: { type: String, required: true },
+    quotationDate: { type: Date, required: true },
+    // Customer Info
     customerName: { type: String, required: true },
     customerPhone: { type: String, default: '' },
     customerGSTIN: { type: String, default: '' },
@@ -33,7 +30,7 @@ const invoiceSchema = mongoose.Schema(
     shippingAddress: { type: String, default: '' },
     placeOfSupply: { type: String, default: '' },
     // Items
-    items: [invoiceItemSchema],
+    items: [quotationItemSchema],
     // Totals
     subtotal: { type: Number, default: 0 },
     totalDiscount: { type: Number, default: 0 },
@@ -41,17 +38,14 @@ const invoiceSchema = mongoose.Schema(
     packagingCharges: { type: Number, default: 0 },
     transportCharges: { type: Number, default: 0 },
     otherCharges: { type: Number, default: 0 },
-    commissionType: { type: String, default: 'None' },
-    commissionValue: { type: Number, default: 0 },
-    commissionAmount: { type: Number, default: 0 },
-    commissionStatus: { type: String, enum: ['Paid', 'Pending', 'Partial'], default: 'Pending' },
     adjustment: { type: Number, default: 0 },
     grandTotal: { type: Number, default: 0 },
+    // Expected orders tracking
+    isExpectedOrder: { type: Boolean, default: false },
+    status: { type: String, enum: ['Draft', 'Sent', 'Accepted', 'Declined'], default: 'Sent' },
     // Notes
     notes: { type: String, default: '' },
     termsConditions: { type: String, default: '' },
-    materialDeliveryStatus: { type: String, enum: ['Pending', 'Delivered'], default: 'Pending' },
-    isStockTransfer: { type: Boolean, default: false },
     bankDetails: {
       accountName: String,
       accountNumber: String,
@@ -63,5 +57,5 @@ const invoiceSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-const Invoice = mongoose.model('Invoice', invoiceSchema);
-export default Invoice;
+const Quotation = mongoose.model('Quotation', quotationSchema);
+export default Quotation;

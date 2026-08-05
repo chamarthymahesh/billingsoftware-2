@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { X, Package, Tag, Layers, DollarSign, Hash, Boxes, FileText, Plus } from 'lucide-react';
 import './ProductCreateModal.css';
+import CreatableSelect from './CreatableSelect';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -20,6 +21,7 @@ const emptyForm = {
 const ProductCreateModal = ({ isOpen, onClose, onProductCreated, initialName = '' }) => {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState([]);
 
   const userInfo = JSON.parse(localStorage.getItem('userInfo'));
   const authHeader = { Authorization: `Bearer ${userInfo?.token}` };
@@ -30,12 +32,31 @@ const ProductCreateModal = ({ isOpen, onClose, onProductCreated, initialName = '
         ...emptyForm,
         name: toProperCase(initialName),
       });
+
+      // Fetch products to populate dropdown options
+      const fetchProducts = async () => {
+        try {
+          const { data } = await axios.get(`${API}/api/products`, { headers: authHeader });
+          setProducts(Array.isArray(data) ? data : []);
+        } catch (err) {
+          console.error('Error fetching products for options', err);
+        }
+      };
+      fetchProducts();
     }
   }, [isOpen, initialName]);
+
+  const brandOptions = [...new Set(products.map(p => toProperCase(p.brand)))].filter(Boolean);
+  const categoryOptions = [...new Set(products.map(p => toProperCase(p.category)))].filter(Boolean);
+  const unitOptions = [...new Set([...UNITS, ...products.map(p => toProperCase(p.unit))])].filter(Boolean);
 
   const handleInput = (e) => {
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
+  };
+
+  const handleSelectChange = (field) => (value) => {
+    setForm(f => ({ ...f, [field]: toProperCase(value) }));
   };
 
   const handleSubmit = async (e) => {
@@ -95,12 +116,11 @@ const ProductCreateModal = ({ isOpen, onClose, onProductCreated, initialName = '
 
             <div className="pr-field">
               <label>Brand</label>
-              <input
-                type="text"
-                name="brand"
+              <CreatableSelect
                 value={form.brand}
-                onChange={handleInput}
-                placeholder="Enter brand..."
+                onChange={handleSelectChange('brand')}
+                options={brandOptions}
+                placeholder="Search or create brand…"
               />
             </div>
 
@@ -114,20 +134,22 @@ const ProductCreateModal = ({ isOpen, onClose, onProductCreated, initialName = '
 
             <div className="pr-field">
               <label>Category</label>
-              <input
-                type="text"
-                name="category"
+              <CreatableSelect
                 value={form.category}
-                onChange={handleInput}
-                placeholder="Enter category..."
+                onChange={handleSelectChange('category')}
+                options={categoryOptions}
+                placeholder="Search or create category…"
               />
             </div>
 
             <div className="pr-field">
               <label>Unit of Measure</label>
-              <select name="unit" value={form.unit} onChange={handleInput}>
-                {UNITS.map(u => <option key={u}>{u}</option>)}
-              </select>
+              <CreatableSelect
+                value={form.unit}
+                onChange={handleSelectChange('unit')}
+                options={unitOptions}
+                placeholder="Search or create unit…"
+              />
             </div>
           </div>
 

@@ -39,6 +39,7 @@ const Products = () => {
   const productNames = [...new Set(products.map(p => toProperCase(p.name)))].filter(Boolean);
   const brandOptions = [...new Set(products.map(p => toProperCase(p.brand)))].filter(Boolean);
   const categoryOptions = [...new Set(products.map(p => toProperCase(p.category)))].filter(Boolean);
+  const unitOptions = [...new Set([...UNITS, ...products.map(p => toProperCase(p.unit))])].filter(Boolean);
 
   useEffect(() => {
     axios.get(`${API}/api/companies`, { headers: authHeader })
@@ -275,9 +276,12 @@ const Products = () => {
                 {/* Unit */}
                 <div className="pr-field">
                   <label>Unit of Measure</label>
-                  <select name="unit" value={form.unit} onChange={handleInput}>
-                    {UNITS.map(u => <option key={u}>{u}</option>)}
-                  </select>
+                  <CreatableSelect
+                    value={form.unit}
+                    onChange={handleSelectChange('unit')}
+                    options={unitOptions}
+                    placeholder="Search or create unit…"
+                  />
                 </div>
               </div>
 

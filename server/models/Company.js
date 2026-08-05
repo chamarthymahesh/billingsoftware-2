@@ -29,6 +29,14 @@ const companySchema = mongoose.Schema(
       bankName: String,
       branchName: String,
     },
+    bankAccounts: [{
+      accountName: String,
+      accountNumber: String,
+      ifscCode: String,
+      bankName: String,
+      branchName: String,
+      isDefault: { type: Boolean, default: false }
+    }],
     signatureImage: {
       type: String,
     },

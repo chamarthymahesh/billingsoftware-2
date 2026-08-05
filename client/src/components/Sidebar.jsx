@@ -21,7 +21,8 @@ import {
   Users,
   Send,
   Car,
-  Building
+  Building,
+  Truck
 } from "lucide-react";
 import "./Sidebar.css";
 
@@ -45,6 +46,8 @@ const Sidebar = () => {
     { name: "Companies", path: "/companies", icon: Building2 },
     { name: "Purchases", path: "/purchases", icon: ShoppingCart },
     { name: "Sales", path: "/sales", icon: TrendingUp },
+    { name: "Quotations", path: "/quotations", icon: FileText },
+    { name: "Delivery Challans", path: "/delivery-challans", icon: Truck },
     { name: "Products", path: "/products", icon: Package },
     { name: "Reports", path: "/reports", icon: LineChart },
     { name: "Settings", path: "/settings", icon: Settings },

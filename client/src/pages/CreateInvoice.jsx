@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import {
   ArrowLeft,
@@ -113,6 +113,8 @@ const calcItem = (item, editingField) => {
 const CreateInvoice = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const fromQuotationId = searchParams.get("fromQuotation");
   const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
   const authHeader = { Authorization: `Bearer ${userInfo?.token}` };
   const isSuperAdmin = userInfo?.role === "Super Admin";
@@ -128,6 +130,7 @@ const CreateInvoice = () => {
     company: userInfo?.companyId || "",
     invoiceNumber: "",
     invoiceDate: new Date().toISOString().split("T")[0],
+    isStockTransfer: false,
     gemContractNumber: "",
     paymentStatus: "Pending",
     paymentMethod: "Cash",
@@ -157,6 +160,16 @@ const CreateInvoice = () => {
   const [quickProductInitialName, setQuickProductInitialName] = useState("");
   const [activeRowIdForQuickProduct, setActiveRowIdForQuickProduct] = useState(null);
 
+  const [companyBankAccounts, setCompanyBankAccounts] = useState([]);
+  const [legacyBankDetails, setLegacyBankDetails] = useState(null);
+  const [selectedBankAccountId, setSelectedBankAccountId] = useState('');
+  const [selectedBank, setSelectedBank] = useState(null);
+
+  const [bankModalOpen, setBankModalOpen] = useState(false);
+  const [newBankForm, setNewBankForm] = useState({
+    accountName: '', bankName: '', accountNumber: '', ifscCode: '', branchName: '', isDefault: false
+  });
+
   useEffect(() => {
     if (id) {
       const fetchInvoiceForEdit = async () => {
@@ -167,6 +180,7 @@ const CreateInvoice = () => {
             company: inv.company?._id || inv.company || "",
             invoiceNumber: inv.invoiceNumber || "",
             invoiceDate: inv.invoiceDate ? new Date(inv.invoiceDate).toISOString().split("T")[0] : "",
+            isStockTransfer: inv.isStockTransfer || false,
             gemContractNumber: inv.gemContractNumber || "",
             paymentStatus: inv.paymentStatus || "Pending",
             paymentMethod: inv.paymentMethod || "Cash",
@@ -187,6 +201,11 @@ const CreateInvoice = () => {
             termsConditions: inv.termsConditions || "",
           });
 
+          if (inv.bankDetails && inv.bankDetails.bankName) {
+            setSelectedBank(inv.bankDetails);
+            setSelectedBankAccountId('saved');
+          }
+
           if (inv.items && inv.items.length > 0) {
             setItems(
               inv.items.map((item) => ({
@@ -204,6 +223,48 @@ const CreateInvoice = () => {
       fetchInvoiceForEdit();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (fromQuotationId && !id) {
+      const fetchQuotationForInvoice = async () => {
+        try {
+          const res = await axios.get(`${API}/api/quotations/${fromQuotationId}`, { headers: authHeader });
+          const qtn = res.data;
+          setForm((f) => ({
+            ...f,
+            company: qtn.company?._id || qtn.company || f.company,
+            customerName: qtn.customerName || "",
+            customerPhone: qtn.customerPhone || "",
+            customerGSTIN: qtn.customerGSTIN || "",
+            customerState: qtn.customerState || "",
+            billingAddress: qtn.billingAddress || "",
+            shippingAddress: qtn.shippingAddress || "",
+            placeOfSupply: qtn.placeOfSupply || "",
+            packagingCharges: qtn.packagingCharges || 0,
+            transportCharges: qtn.transportCharges || 0,
+            otherCharges: qtn.otherCharges || 0,
+            adjustment: qtn.adjustment || 0,
+            notes: qtn.notes || "",
+            termsConditions: qtn.termsConditions || f.termsConditions,
+          }));
+
+          if (qtn.items && qtn.items.length > 0) {
+            setItems(
+              qtn.items.map((item) => ({
+                ...item,
+                id: item.id || item._id || Date.now() + Math.random(),
+                product: item.product?._id || item.product || "",
+              })),
+            );
+          }
+        } catch (err) {
+          console.error("Error fetching quotation for invoice:", err);
+          alert("Failed to load quotation details.");
+        }
+      };
+      fetchQuotationForInvoice();
+    }
+  }, [fromQuotationId, id]);
 
   useEffect(() => {
     const fetchCustomersAndCompanies = async () => {
@@ -444,6 +505,95 @@ const CreateInvoice = () => {
     if (checked) setForm((f) => ({ ...f, shippingAddress: f.billingAddress }));
   };
 
+  useEffect(() => {
+    if (companies.length > 0 && form.company) {
+      const activeCompanyObj = companies.find((c) => c._id === form.company);
+      if (activeCompanyObj) {
+        const accounts = activeCompanyObj.bankAccounts || [];
+        setCompanyBankAccounts(accounts);
+        setLegacyBankDetails(activeCompanyObj.bankDetails || null);
+
+        // Pre-select default account if not editing
+        if (!id) {
+          const defaultAcc = accounts.find((a) => a.isDefault);
+          if (defaultAcc) {
+            setSelectedBankAccountId(defaultAcc._id);
+            setSelectedBank(defaultAcc);
+          } else if (accounts.length > 0) {
+            setSelectedBankAccountId(accounts[0]._id);
+            setSelectedBank(accounts[0]);
+          } else if (activeCompanyObj.bankDetails?.bankName) {
+            setSelectedBankAccountId('legacy');
+            setSelectedBank(activeCompanyObj.bankDetails);
+          } else {
+            setSelectedBankAccountId('');
+            setSelectedBank(null);
+          }
+        }
+      }
+    }
+  }, [form.company, companies, id]);
+
+  // Build bank account options for CreatableSelect
+  const bankAccountOptions = companyBankAccounts.map((acc) => ({
+    label: `${acc.bankName} - ${acc.accountNumber}${acc.isDefault ? ' (Default)' : ''}`,
+    value: `${acc.bankName} - ${acc.accountNumber}`,
+  }));
+
+  const selectedBankLabel = selectedBank
+    ? `${selectedBank.bankName} - ${selectedBank.accountNumber}`
+    : '';
+
+  const handleBankAccountChange = (val) => {
+    if (!val) {
+      setSelectedBankAccountId('');
+      setSelectedBank(null);
+      return;
+    }
+    const found = companyBankAccounts.find(
+      (a) => `${a.bankName} - ${a.accountNumber}` === val || `${a.bankName} - ${a.accountNumber} (Default)` === val
+    );
+    if (found) {
+      setSelectedBankAccountId(found._id);
+      setSelectedBank(found);
+      return;
+    }
+    setSelectedBankAccountId('');
+    setSelectedBank(null);
+  };
+
+  const handleCreateBankOption = (typedName) => {
+    setNewBankForm({ accountName: '', bankName: typedName, accountNumber: '', ifscCode: '', branchName: '', isDefault: false });
+    setBankModalOpen(true);
+  };
+
+  const handleSaveNewBank = async () => {
+    if (!newBankForm.bankName || !newBankForm.accountNumber || !newBankForm.ifscCode) {
+      return alert('Please fill Bank Name, Account Number and IFSC Code.');
+    }
+    try {
+      const updatedAccounts = [...companyBankAccounts, newBankForm];
+      await axios.put(`${API}/api/companies/${form.company}`, { bankAccounts: updatedAccounts }, { headers: authHeader });
+      // Refresh companies to get new _id
+      const { data } = await axios.get(`${API}/api/companies`, { headers: authHeader });
+      setCompanies(data);
+      const updatedCompany = data.find((c) => c._id === form.company);
+      if (updatedCompany) {
+        const newAccounts = updatedCompany.bankAccounts || [];
+        setCompanyBankAccounts(newAccounts);
+        // Select the newly added account (last one)
+        const newAcc = newAccounts[newAccounts.length - 1];
+        if (newAcc) {
+          setSelectedBankAccountId(newAcc._id);
+          setSelectedBank(newAcc);
+        }
+      }
+      setBankModalOpen(false);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error adding bank account');
+    }
+  };
+
   // Computed totals
   const subtotal = items.reduce((s, i) => s + (i.taxableAmount || 0), 0);
   const totalDiscount = items.reduce((s, i) => {
@@ -530,6 +680,7 @@ const CreateInvoice = () => {
         commissionAmount: Number(commissionAmount.toFixed(2)),
         adjustment: Number(form.adjustment) || 0,
         grandTotal: grandTotal,
+        bankDetails: selectedBank,
       };
       console.log("CreateInvoice final invoice payload:", payload);
       if (id) {
@@ -540,6 +691,10 @@ const CreateInvoice = () => {
         await axios.post(`${API}/api/invoices`, payload, {
           headers: { ...authHeader, "Content-Type": "application/json" },
         });
+      }
+      if (fromQuotationId && !id) {
+        // Update quotation status to Accepted (Won)
+        await axios.put(`${API}/api/quotations/${fromQuotationId}`, { status: 'Accepted' }, { headers: authHeader });
       }
       navigate("/sales");
     } catch (err) {
@@ -808,8 +963,8 @@ const CreateInvoice = () => {
                   <tr>
                     <th style={{ minWidth: "260px" }}>PRODUCT</th>
                     <th style={{ width: "80px" }}>HSN</th>
-                    <th style={{ width: "60px" }}>UNIT</th>
-                    <th style={{ width: "70px" }}>QTY</th>
+                    <th style={{ width: "90px" }}>UNIT</th>
+                    <th style={{ width: "120px" }}>QTY</th>
                     <th style={{ width: "100px" }}>RATE (₹)</th>
                     <th style={{ width: "100px" }}>MRP (₹)</th>
                     <th style={{ width: "70px" }}>DISC %</th>
@@ -901,12 +1056,21 @@ const CreateInvoice = () => {
                           />
                         </td>
                         <td>
-                          <input
+                          <select
                             className="ci-input"
-                            type="text"
                             value={item.unit}
                             onChange={(e) => handleItemChange(item.id, "unit", e.target.value)}
-                          />
+                          >
+                            <option value="Pcs">Pcs</option>
+                            <option value="Box">Box</option>
+                            <option value="Kg">Kg</option>
+                            <option value="Gms">Gms</option>
+                            <option value="Ltr">Ltr</option>
+                            <option value="Mtr">Mtr</option>
+                            <option value="Nos">Nos</option>
+                            <option value="Set">Set</option>
+                            <option value="Bag">Bag</option>
+                          </select>
                         </td>
                         <td>
                           <input
@@ -1083,7 +1247,7 @@ const CreateInvoice = () => {
 
           {/* ── Section: Notes ── */}
           <div className="ci-section">
-            <div className="ci-grid-2">
+            <div className="ci-grid-3">
               <div className="ci-field">
                 <label>NOTES</label>
                 <textarea
@@ -1097,6 +1261,23 @@ const CreateInvoice = () => {
               <div className="ci-field">
                 <label>TERMS & CONDITIONS</label>
                 <textarea name="termsConditions" value={form.termsConditions} onChange={handleInput} rows={3} />
+              </div>
+              <div className="ci-field">
+                <label>BANK ACCOUNT FOR PAYMENT</label>
+                <CreatableSelect
+                  value={selectedBankLabel}
+                  onChange={handleBankAccountChange}
+                  onCreateOption={handleCreateBankOption}
+                  options={bankAccountOptions}
+                  placeholder="Select bank account..."
+                />
+                {selectedBank && (
+                  <div style={{ marginTop: '10px', fontSize: '11px', color: '#94a3b8', background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div><strong>Bank:</strong> {selectedBank.bankName}</div>
+                    <div><strong>A/c No:</strong> {selectedBank.accountNumber}</div>
+                    <div><strong>IFSC:</strong> {selectedBank.ifscCode}</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1208,6 +1389,46 @@ const CreateInvoice = () => {
         initialName={quickProductInitialName}
         onProductCreated={handleQuickProductCreated}
       />
+      {/* Bank Account Creation Modal */}
+      {bankModalOpen && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#1e293b', borderRadius: '12px', padding: '28px', width: '500px', maxWidth: '95vw', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <h3 style={{ color: '#f1f5f9', marginBottom: '20px', fontSize: '1.1rem', fontWeight: 700 }}>Add New Bank Account</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div className="ci-field">
+                <label>ACCOUNT HOLDER NAME</label>
+                <input type="text" value={newBankForm.accountName} onChange={(e) => setNewBankForm({ ...newBankForm, accountName: e.target.value })} placeholder="e.g. Acme Corp" />
+              </div>
+              <div className="ci-field">
+                <label>BANK NAME *</label>
+                <input type="text" value={newBankForm.bankName} onChange={(e) => setNewBankForm({ ...newBankForm, bankName: e.target.value })} placeholder="e.g. HDFC Bank" />
+              </div>
+              <div className="ci-field">
+                <label>ACCOUNT NUMBER *</label>
+                <input type="text" value={newBankForm.accountNumber} onChange={(e) => setNewBankForm({ ...newBankForm, accountNumber: e.target.value })} placeholder="e.g. 50100012345" />
+              </div>
+              <div className="ci-field">
+                <label>IFSC CODE *</label>
+                <input type="text" value={newBankForm.ifscCode} onChange={(e) => setNewBankForm({ ...newBankForm, ifscCode: e.target.value })} placeholder="e.g. HDFC0000123" />
+              </div>
+              <div className="ci-field">
+                <label>BRANCH NAME</label>
+                <input type="text" value={newBankForm.branchName} onChange={(e) => setNewBankForm({ ...newBankForm, branchName: e.target.value })} placeholder="e.g. Connaught Place" />
+              </div>
+              <div className="ci-field" style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '4px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', textTransform: 'none', letterSpacing: 'normal' }}>
+                  <input type="checkbox" checked={newBankForm.isDefault} onChange={(e) => setNewBankForm({ ...newBankForm, isDefault: e.target.checked })} style={{ width: '16px', height: '16px' }} />
+                  Set as Default
+                </label>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setBankModalOpen(false)} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: '#94a3b8', padding: '8px 18px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>Cancel</button>
+              <button type="button" onClick={handleSaveNewBank} style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: '#fff', border: 'none', padding: '8px 18px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>Add Bank Account</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

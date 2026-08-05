@@ -20,18 +20,60 @@ const InvoiceProfitReport = () => {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterInvoicePayment, setFilterInvoicePayment] = useState('');
   const [companies, setCompanies] = useState([]);
+  const [search, setSearch] = useState('');
+  const [filterMonth, setFilterMonth] = useState('');
+  const [filterYear, setFilterYear] = useState('');
+
+  const uniqueYears = Array.from(
+    new Set(
+      reports.map(r => r.invoiceDate ? new Date(r.invoiceDate).getFullYear() : null).filter(Boolean)
+    )
+  ).sort((a, b) => b - a);
+
+  const applyGeneralFilter = (r) => {
+    // 1. Search filter (customer name, invoice #, gem contract, product name)
+    if (search) {
+      const searchLower = search.toLowerCase();
+      const matchesCustomer = (r.customerName || "").toLowerCase().includes(searchLower);
+      const matchesInvoice = (r.invoiceNumber || "").toLowerCase().includes(searchLower);
+      const matchesGem = (r.gemContractNumber || "").toLowerCase().includes(searchLower);
+      const matchesProduct = r.items?.some((item) => (item.productName || "").toLowerCase().includes(searchLower));
+      if (!matchesCustomer && !matchesInvoice && !matchesGem && !matchesProduct) {
+        return false;
+      }
+    }
+
+    // 2. Month filter
+    if (filterMonth) {
+      const month = new Date(r.invoiceDate).getMonth() + 1; // 1-12
+      if (String(month) !== String(filterMonth)) return false;
+    }
+
+    // 3. Year filter
+    if (filterYear) {
+      const year = new Date(r.invoiceDate).getFullYear();
+      if (String(year) !== String(filterYear)) return false;
+    }
+
+    // 4. Company filter (Super Admin)
+    if (isSuperAdmin && filterCompany) {
+      const compId = r.company?._id || r.company;
+      if (String(compId) !== String(filterCompany)) return false;
+    }
+
+    return true;
+  };
+
+  const profitReportsFiltered = reports.filter(applyGeneralFilter);
 
   // Compute Filtered Reports
   const commissionReportsFiltered = reports
     .filter(r => (r.commissionAmount > 0 || r.transportCharges > 0))
+    .filter(applyGeneralFilter)
     .filter(r => {
       if (filterCustomer && r.customerName !== filterCustomer) return false;
       if (filterStatus && (r.commissionStatus || 'Pending') !== filterStatus) return false;
       if (filterInvoicePayment && (r.paymentStatus || 'Pending') !== filterInvoicePayment) return false;
-      if (isSuperAdmin && filterCompany) {
-        const compId = r.company?._id || r.company;
-        if (String(compId) !== String(filterCompany)) return false;
-      }
       return true;
     });
 
@@ -193,77 +235,129 @@ const InvoiceProfitReport = () => {
         <div className="error-msg sl-center" style={{ color: '#ef4444' }}>{error}</div>
       ) : (
         <>
-          {activeTab === 'profit' && (
-            <div className="animate-fade-in">
-              <div style={{color: '#aaa', fontSize: '0.9rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px'}}>
-                <strong>Profit Formula:</strong><br/>
-                <code>=((SP_Including_GST-CP_Including_GST)-((SP_Including_GST-CP_Including_GST)*GST_Percentage/100))-Transport-Commission-OtherCharges</code>
-              </div>
-              <div className="sl-table-wrap">
-                <table className="sl-table profit-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Invoice #</th>
-                      <th>Customer Name</th>
-                      <th>Total SP (incl GST)</th>
-                      <th>Total Cost</th>
-                      <th>Gross Profit</th>
-                      <th>GST on Profit</th>
-                      <th>Profit (After Tax)</th>
-                      <th>Transport</th>
-                      <th>Commission</th>
-                      <th>Other Charges</th>
-                      <th>Final Profit</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reports.length > 0 ? (
-                      reports.map((report) => (
-                        <tr key={report.invoiceNumber}>
-                          <td>{new Date(report.invoiceDate).toLocaleDateString()}</td>
-                          <td><span className="sl-code">{report.invoiceNumber}</span></td>
-                          <td>{report.customerName}</td>
-                          <td>₹{report.grandTotal?.toFixed(2) || '0.00'}</td>
-                          <td>₹{report.totalCost?.toFixed(2) || '0.00'}</td>
-                          <td>₹{report.grossProfit?.toFixed(2) || '0.00'}</td>
-                          <td>₹{(report.grossProfit * 0.18)?.toFixed(2) || '0.00'}</td>
-                          <td>₹{report.profitAfterGst?.toFixed(2) || '0.00'}</td>
-                          <td>₹{report.transportCharges?.toFixed(2) || '0.00'}</td>
-                          <td>₹{report.commissionAmount?.toFixed(2) || '0.00'}</td>
-                          <td>₹{report.otherCharges?.toFixed(2) || '0.00'}</td>
-                          <td style={{ color: '#10b981', fontWeight: 'bold' }}>₹{report.finalProfit?.toFixed(2) || '0.00'}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="12" className="sl-center">No reports found</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'commission' && (
-            <div className="animate-fade-in">
-              
-              {/* Filter Toolbar */}
-              <div
+          {/* Shared Filter Toolbar */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '16px',
+              alignItems: 'center',
+              background: 'rgba(30, 41, 59, 0.4)',
+              border: '1px solid rgba(255,255,255,0.05)',
+              padding: '16px 20px',
+              borderRadius: '12px',
+              marginBottom: '20px',
+              flexWrap: 'wrap',
+            }}
+          >
+            {/* Search Input */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1 1 200px' }}>
+              <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Search</label>
+              <input
+                placeholder="Search customer, invoice #, product..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 style={{
-                  display: 'flex',
-                  gap: '16px',
-                  alignItems: 'center',
-                  background: 'rgba(30, 41, 59, 0.4)',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                  padding: '16px 20px',
-                  borderRadius: '12px',
-                  marginBottom: '20px',
-                  flexWrap: 'wrap',
+                  background: '#1e293b',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            {/* Month Filter */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Month</label>
+              <select
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value)}
+                style={{
+                  background: '#1e293b',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  minWidth: '130px',
                 }}
               >
-                {/* Customer Name Filter */}
+                <option value="">All Months</option>
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+              </select>
+            </div>
+
+            {/* Year Filter */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Year</label>
+              <select
+                value={filterYear}
+                onChange={(e) => setFilterYear(e.target.value)}
+                style={{
+                  background: '#1e293b',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  minWidth: '100px',
+                }}
+              >
+                <option value="">All Years</option>
+                {uniqueYears.map((yr, idx) => (
+                  <option key={idx} value={yr}>{yr}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Company Filter (Super Admin only) */}
+            {isSuperAdmin && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Company</label>
+                <select
+                  value={filterCompany}
+                  onChange={(e) => setFilterCompany(e.target.value)}
+                  style={{
+                    background: '#1e293b',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    color: '#fff',
+                    fontSize: '0.9rem',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    minWidth: '180px',
+                  }}
+                >
+                  <option value="">All Companies</option>
+                  {companies.map((comp) => (
+                    <option key={comp._id} value={comp._id}>{comp.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Commission Tab Specific Filters */}
+            {activeTab === 'commission' && (
+              <>
+                {/* Customer Filter */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Customer Name</label>
                   <select
@@ -278,7 +372,7 @@ const InvoiceProfitReport = () => {
                       fontSize: '0.9rem',
                       outline: 'none',
                       cursor: 'pointer',
-                      minWidth: '180px',
+                      minWidth: '160px',
                     }}
                   >
                     <option value="">All Customers</option>
@@ -288,32 +382,30 @@ const InvoiceProfitReport = () => {
                   </select>
                 </div>
 
-                {/* Company Filter (Super Admin only) */}
-                {isSuperAdmin && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Company</label>
-                    <select
-                      value={filterCompany}
-                      onChange={(e) => setFilterCompany(e.target.value)}
-                      style={{
-                        background: '#1e293b',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '8px',
-                        padding: '8px 12px',
-                        color: '#fff',
-                        fontSize: '0.9rem',
-                        outline: 'none',
-                        cursor: 'pointer',
-                        minWidth: '180px',
-                      }}
-                    >
-                      <option value="">All Companies</option>
-                      {companies.map((comp) => (
-                        <option key={comp._id} value={comp._id}>{comp.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                {/* Commission Status */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Commission Status</label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    style={{
+                      background: '#1e293b',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      color: '#fff',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      minWidth: '160px',
+                    }}
+                  >
+                    <option value="">All (Paid & Pending)</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Partial">Partial</option>
+                  </select>
+                </div>
 
                 {/* Invoice Payment Status Filter */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -339,35 +431,96 @@ const InvoiceProfitReport = () => {
                     <option value="Partial">Partial</option>
                   </select>
                 </div>
+              </>
+            )}
 
-                {/* Clear Button */}
-                {(filterCustomer || filterCompany || filterStatus || filterInvoicePayment) && (
-                  <button
-                    onClick={() => {
-                      setFilterCustomer('');
-                      setFilterCompany('');
-                      setFilterStatus('');
-                      setFilterInvoicePayment('');
-                    }}
-                    style={{
-                      alignSelf: 'flex-end',
-                      background: 'rgba(239, 68, 68, 0.1)',
-                      border: '1px solid rgba(239, 68, 68, 0.2)',
-                      color: '#f87171',
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontWeight: 600,
-                      fontSize: '0.9rem',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
-                  >
-                    Clear Filters
-                  </button>
-                )}
+            {/* Clear Button */}
+            {(filterCustomer || filterCompany || filterStatus || filterInvoicePayment || search || filterMonth || filterYear) && (
+              <button
+                onClick={() => {
+                  setFilterCustomer('');
+                  setFilterCompany('');
+                  setFilterStatus('');
+                  setFilterInvoicePayment('');
+                  setSearch('');
+                  setFilterMonth('');
+                  setFilterYear('');
+                }}
+                style={{
+                  alignSelf: 'flex-end',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  color: '#f87171',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+
+          {activeTab === 'profit' && (
+            <div className="animate-fade-in">
+              <div style={{color: '#aaa', fontSize: '0.9rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px'}}>
+                <strong>Profit Formula:</strong><br/>
+                <code>=((SP_Including_GST-CP_Including_GST)-((SP_Including_GST-CP_Including_GST)*GST_Percentage/100))-Transport-Commission-OtherCharges</code>
               </div>
+              <div className="sl-table-wrap">
+                <table className="sl-table profit-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Invoice #</th>
+                      <th>Customer Name</th>
+                      <th>Total SP (incl GST)</th>
+                      <th>Total Cost</th>
+                      <th>Gross Profit</th>
+                      <th>GST on Profit</th>
+                      <th>Profit (After Tax)</th>
+                      <th>Transport</th>
+                      <th>Commission</th>
+                      <th>Other Charges</th>
+                      <th>Final Profit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {profitReportsFiltered.length > 0 ? (
+                      profitReportsFiltered.map((report) => (
+                        <tr key={report.invoiceNumber}>
+                          <td>{new Date(report.invoiceDate).toLocaleDateString()}</td>
+                          <td><span className="sl-code">{report.invoiceNumber}</span></td>
+                          <td>{report.customerName}</td>
+                          <td>₹{report.grandTotal?.toFixed(2) || '0.00'}</td>
+                          <td>₹{report.totalCost?.toFixed(2) || '0.00'}</td>
+                          <td>₹{report.grossProfit?.toFixed(2) || '0.00'}</td>
+                          <td>₹{(report.grossProfit * (report.gstRate || 18) / 100)?.toFixed(2) || '0.00'}<span style={{fontSize: '0.72rem', color: '#94a3b8', marginLeft: '4px'}}>({Math.round(report.gstRate || 18)}%)</span></td>
+                          <td>₹{report.profitAfterGst?.toFixed(2) || '0.00'}</td>
+                          <td>₹{report.transportCharges?.toFixed(2) || '0.00'}</td>
+                          <td>₹{report.commissionAmount?.toFixed(2) || '0.00'}</td>
+                          <td>₹{report.otherCharges?.toFixed(2) || '0.00'}</td>
+                          <td style={{ color: '#10b981', fontWeight: 'bold' }}>₹{report.finalProfit?.toFixed(2) || '0.00'}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="12" className="sl-center">No reports found</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'commission' && (
+            <div className="animate-fade-in">
 
               {/* Summary Cards */}
               <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>

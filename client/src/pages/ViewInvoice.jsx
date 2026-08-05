@@ -111,7 +111,14 @@ const ViewInvoice = () => {
           <button style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }} onClick={() => navigate('/sales')}>
             <ArrowLeft size={16} /> Back to Sales
           </button>
-          <h1 className="sl-title">Invoice {invoice.invoiceNumber}</h1>
+          <h1 className="sl-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            Invoice {invoice.invoiceNumber}
+            {invoice.isStockTransfer && (
+              <span className="no-print" style={{ display: "inline-block", background: "rgba(59, 130, 246, 0.15)", color: "#60a5fa", fontSize: "12px", fontWeight: "bold", padding: "4px 10px", borderRadius: "6px" }}>
+                Stock Transfer
+              </span>
+            )}
+          </h1>
           <p className="sl-subtitle">View and print invoice {invoice.invoiceNumber}</p>
         </div>
         <button className="sl-new-btn" onClick={() => window.print()}>
@@ -257,14 +264,21 @@ const ViewInvoice = () => {
               </div>
             )}
             
-            {(!canvasElements || canvasElements.bankDetails?.isVisible) && invoice.company?.bankDetails?.bankName && (
+            {(!canvasElements || canvasElements.bankDetails?.isVisible) && (invoice.bankDetails?.bankName || invoice.company?.bankDetails?.bankName) && (
               <div className="bank-details-info" style={{ ...getCanvasStyles('bankDetails', 6), marginTop: 0 }}>
                 <h4 className="notes-title" style={{ color: getCanvasStyles('bankDetails', 6).color || primaryColor }}>Bank Details (For Payment)</h4>
                 <div className="bank-grid">
-                  <p><span>Bank:</span> {invoice.company.bankDetails.bankName}</p>
-                  <p><span>A/c No:</span> {invoice.company.bankDetails.accountNumber}</p>
-                  <p><span>IFSC:</span> {invoice.company.bankDetails.ifscCode}</p>
-                  {invoice.company.bankDetails.branchName && <p><span>Branch:</span> {invoice.company.bankDetails.branchName}</p>}
+                  {(() => {
+                    const bank = invoice.bankDetails?.bankName ? invoice.bankDetails : invoice.company.bankDetails;
+                    return (
+                      <>
+                        <p><span>Bank:</span> {bank.bankName}</p>
+                        <p><span>A/c No:</span> {bank.accountNumber}</p>
+                        <p><span>IFSC:</span> {bank.ifscCode}</p>
+                        {bank.branchName && <p><span>Branch:</span> {bank.branchName}</p>}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -301,37 +315,7 @@ const ViewInvoice = () => {
               </>
             )}
 
-            {invoice.transportCharges > 0 && (
-              <div className="summary-row">
-                <span>Transport Charges:</span>
-                <span>₹{invoice.transportCharges.toFixed(2)}</span>
-              </div>
-            )}
-            {invoice.packagingCharges > 0 && (
-              <div className="summary-row">
-                <span>Packaging Charges:</span>
-                <span>₹{invoice.packagingCharges.toFixed(2)}</span>
-              </div>
-            )}
-            {invoice.otherCharges > 0 && (
-              <div className="summary-row">
-                <span>Other Charges:</span>
-                <span>₹{invoice.otherCharges.toFixed(2)}</span>
-              </div>
-            )}
-            {invoice.commissionAmount > 0 && (
-              <div className="summary-row" style={{ color: '#34d399' }}>
-                <span>Commission ({invoice.commissionType}):</span>
-                <span>-₹{invoice.commissionAmount.toFixed(2)}</span>
-              </div>
-            )}
 
-            {invoice.adjustment > 0 && (
-              <div className="summary-row">
-                <span>Adjustment:</span>
-                <span>-₹{invoice.adjustment.toFixed(2)}</span>
-              </div>
-            )}
 
             <div className="summary-row grand-total">
               <span>Grand Total:</span>

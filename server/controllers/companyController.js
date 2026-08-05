@@ -140,6 +140,10 @@ const updateCompany = async (req, res) => {
         };
       }
 
+      if (req.body.bankAccounts !== undefined) {
+        company.bankAccounts = req.body.bankAccounts;
+      }
+
       if (req.body.invoiceTemplates) {
         company.invoiceTemplates = {
           ...company.invoiceTemplates,

@@ -29,11 +29,16 @@ const Settings = () => {
     signatureImage: ''
   });
 
-  const [bankDetails, setBankDetails] = useState({
+
+
+  const [bankAccounts, setBankAccounts] = useState([]);
+  const [newAccount, setNewAccount] = useState({
+    accountName: '',
     bankName: '',
     accountNumber: '',
     ifscCode: '',
-    branchName: ''
+    branchName: '',
+    isDefault: false
   });
 
   const [invoiceTemplates, setInvoiceTemplates] = useState({
@@ -90,12 +95,22 @@ const Settings = () => {
     setBranding({
       signatureImage: company.signatureImage || ''
     });
-    setBankDetails({
-      bankName: company.bankDetails?.bankName || '',
-      accountNumber: company.bankDetails?.accountNumber || '',
-      ifscCode: company.bankDetails?.ifscCode || '',
-      branchName: company.bankDetails?.branchName || ''
-    });
+    // Merge legacy bankDetails into bankAccounts list if not already present
+    const existingAccounts = company.bankAccounts || [];
+    const legacy = company.bankDetails;
+    if (legacy && legacy.bankName && existingAccounts.length === 0) {
+      // Migrate legacy bank details as the first (default) account
+      existingAccounts.push({
+        tempId: 'legacy_' + Date.now(),
+        accountName: company.name || '',
+        bankName: legacy.bankName,
+        accountNumber: legacy.accountNumber,
+        ifscCode: legacy.ifscCode,
+        branchName: legacy.branchName || '',
+        isDefault: true,
+      });
+    }
+    setBankAccounts(existingAccounts);
     setInvoiceTemplates({
       headerStyle: company.invoiceTemplates?.headerStyle || 'Professional (Logo Left)',
       financialYear: company.invoiceTemplates?.financialYear || '2026-27',
@@ -126,7 +141,7 @@ const Settings = () => {
   };
 
   const handleProfileChange = (e) => setCompanyProfile({ ...companyProfile, [e.target.name]: e.target.value });
-  const handleBankChange = (e) => setBankDetails({ ...bankDetails, [e.target.name]: e.target.value });
+
   const handleTemplateChange = (e) => setInvoiceTemplates({ ...invoiceTemplates, [e.target.name]: e.target.value });
   const handleCheckboxChange = (e) => setInvoiceTemplates({ ...invoiceTemplates, [e.target.name]: e.target.checked });
 
@@ -157,10 +172,27 @@ const Settings = () => {
     if (!selectedCompanyId) return;
     try {
       setSaving(true);
+      // Derive legacy bankDetails from the default bank account for backward compatibility
+      const defaultAccount = bankAccounts.find(a => a.isDefault) || bankAccounts[0] || null;
+      const derivedBankDetails = defaultAccount ? {
+        bankName: defaultAccount.bankName,
+        accountNumber: defaultAccount.accountNumber,
+        ifscCode: defaultAccount.ifscCode,
+        branchName: defaultAccount.branchName || '',
+      } : { bankName: '', accountNumber: '', ifscCode: '', branchName: '' };
+      // Strip any invalid _id fields so Mongoose auto-generates ObjectIds
+      const cleanedAccounts = bankAccounts.map(({ tempId, ...acc }) => {
+        const cleaned = { ...acc };
+        if (cleaned._id && !/^[a-f\d]{24}$/i.test(cleaned._id)) {
+          delete cleaned._id;
+        }
+        return cleaned;
+      });
       const payload = {
         ...companyProfile,
         signatureImage: branding.signatureImage,
-        bankDetails,
+        bankDetails: derivedBankDetails,
+        bankAccounts: cleanedAccounts,
         invoiceTemplates
       };
       
@@ -174,6 +206,43 @@ const Settings = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleAddAccount = () => {
+    if (!newAccount.bankName || !newAccount.accountNumber || !newAccount.ifscCode) {
+      alert("Please fill in Bank Name, Account Number and IFSC Code.");
+      return;
+    }
+    const updated = [...bankAccounts];
+    if (newAccount.isDefault) {
+      updated.forEach(a => a.isDefault = false);
+    }
+    updated.push({
+      ...newAccount,
+      tempId: Date.now().toString()
+    });
+    setBankAccounts(updated);
+    setNewAccount({
+      accountName: '',
+      bankName: '',
+      accountNumber: '',
+      ifscCode: '',
+      branchName: '',
+      isDefault: false
+    });
+  };
+
+  const handleDeleteAccount = (index) => {
+    const updated = bankAccounts.filter((_, idx) => idx !== index);
+    setBankAccounts(updated);
+  };
+
+  const handleSetDefaultAccount = (index) => {
+    const updated = bankAccounts.map((a, idx) => ({
+      ...a,
+      isDefault: idx === index
+    }));
+    setBankAccounts(updated);
   };
 
   if (loading) return <div className="settings-loading">Loading settings...</div>;
@@ -273,28 +342,138 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Bank Details */}
+        {/* Bank Accounts */}
         <div className="settings-card">
-          <div className="card-header">
-            <CreditCard size={16} /> BANK DETAILS (FOR INVOICES)
+          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CreditCard size={16} /> BANK ACCOUNTS
           </div>
-          <div className="card-grid">
-            <div className="form-group">
-              <label>BANK NAME</label>
-              <input type="text" name="bankName" value={bankDetails.bankName} onChange={handleBankChange} />
+          
+          {bankAccounts.length > 0 && (
+            <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.06)', overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', color: '#f1f5f9', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'left' }}>
+                    <th style={{ padding: '10px 5px' }}>Account Holder</th>
+                    <th style={{ padding: '10px 5px' }}>Bank Name</th>
+                    <th style={{ padding: '10px 5px' }}>Account Number</th>
+                    <th style={{ padding: '10px 5px' }}>IFSC</th>
+                    <th style={{ padding: '10px 5px' }}>Default?</th>
+                    <th style={{ padding: '10px 5px', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bankAccounts.map((acc, index) => (
+                    <tr key={acc._id || acc.tempId || index} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '10px 5px' }}>{acc.accountName || '—'}</td>
+                      <td style={{ padding: '10px 5px' }}>{acc.bankName}</td>
+                      <td style={{ padding: '10px 5px' }}>{acc.accountNumber}</td>
+                      <td style={{ padding: '10px 5px' }}>{acc.ifscCode}</td>
+                      <td style={{ padding: '10px 5px' }}>
+                        {acc.isDefault ? (
+                          <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>Default</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleSetDefaultAccount(index)}
+                            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: '#94a3b8', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}
+                          >
+                            Set Default
+                          </button>
+                        )}
+                      </td>
+                      <td style={{ padding: '10px 5px', textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAccount(index)}
+                          style={{ background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '0.85rem' }}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="form-group">
-              <label>ACCOUNT NUMBER</label>
-              <input type="text" name="accountNumber" value={bankDetails.accountNumber} onChange={handleBankChange} />
+          )}
+
+          <div style={{ padding: '20px' }}>
+            <h4 style={{ color: '#60a5fa', marginBottom: '15px', fontSize: '0.9rem', fontWeight: 600 }}>Add Bank Account</h4>
+            <div className="card-grid" style={{ marginBottom: '15px' }}>
+              <div className="form-group">
+                <label>ACCOUNT HOLDER NAME</label>
+                <input
+                  type="text"
+                  value={newAccount.accountName}
+                  onChange={(e) => setNewAccount({ ...newAccount, accountName: e.target.value })}
+                  placeholder="e.g. Acme Corp"
+                />
+              </div>
+              <div className="form-group">
+                <label>BANK NAME *</label>
+                <input
+                  type="text"
+                  value={newAccount.bankName}
+                  onChange={(e) => setNewAccount({ ...newAccount, bankName: e.target.value })}
+                  placeholder="e.g. HDFC Bank"
+                />
+              </div>
+              <div className="form-group">
+                <label>ACCOUNT NUMBER *</label>
+                <input
+                  type="text"
+                  value={newAccount.accountNumber}
+                  onChange={(e) => setNewAccount({ ...newAccount, accountNumber: e.target.value })}
+                  placeholder="e.g. 50100012345"
+                />
+              </div>
+              <div className="form-group">
+                <label>IFSC CODE *</label>
+                <input
+                  type="text"
+                  value={newAccount.ifscCode}
+                  onChange={(e) => setNewAccount({ ...newAccount, ifscCode: e.target.value })}
+                  placeholder="e.g. HDFC0000123"
+                />
+              </div>
+              <div className="form-group">
+                <label>BRANCH NAME</label>
+                <input
+                  type="text"
+                  value={newAccount.branchName}
+                  onChange={(e) => setNewAccount({ ...newAccount, branchName: e.target.value })}
+                  placeholder="e.g. Connaught Place"
+                />
+              </div>
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '24px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0, textTransform: 'none', letterSpacing: 'normal' }}>
+                  <input
+                    type="checkbox"
+                    checked={newAccount.isDefault}
+                    onChange={(e) => setNewAccount({ ...newAccount, isDefault: e.target.checked })}
+                    style={{ width: '16px', height: '16px', margin: 0 }}
+                  />
+                  Set as Default Bank Account
+                </label>
+              </div>
             </div>
-            <div className="form-group">
-              <label>IFSC CODE</label>
-              <input type="text" name="ifscCode" value={bankDetails.ifscCode} onChange={handleBankChange} />
-            </div>
-            <div className="form-group">
-              <label>BRANCH NAME</label>
-              <input type="text" name="branchName" value={bankDetails.branchName} onChange={handleBankChange} />
-            </div>
+            <button
+              type="button"
+              onClick={handleAddAccount}
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                color: '#fff',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+              }}
+            >
+              Add to Bank Accounts List
+            </button>
           </div>
         </div>
 
