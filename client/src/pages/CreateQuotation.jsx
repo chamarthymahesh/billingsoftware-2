@@ -150,8 +150,10 @@ const CreateQuotation = () => {
             termsConditions: qtn.termsConditions || "",
           });
 
-          if (qtn.shippingAddress === qtn.billingAddress && qtn.billingAddress) {
+          if (!qtn.shippingAddress || qtn.shippingAddress === qtn.billingAddress) {
             setSameAsShipping(true);
+          } else {
+            setSameAsShipping(false);
           }
 
           if (qtn.bankDetails && qtn.bankDetails.bankName) {
@@ -206,6 +208,11 @@ const CreateQuotation = () => {
     if (cust) {
       const bAddr = cust.billingAddress || "";
       const sAddr = cust.shippingAddress || bAddr;
+      if (!cust.shippingAddress || bAddr === sAddr) {
+        setSameAsShipping(true);
+      } else {
+        setSameAsShipping(false);
+      }
       setForm((f) => ({
         ...f,
         customerName: cust.name,

@@ -148,6 +148,12 @@ const CreatePreOrder = () => {
             termsConditions: po.termsConditions || "",
           });
 
+          if (!po.shippingAddress || po.shippingAddress === po.billingAddress) {
+            setSameAsShipping(true);
+          } else {
+            setSameAsShipping(false);
+          }
+
           if (po.items && po.items.length > 0) {
             setItems(
               po.items.map((i) => ({
@@ -209,14 +215,14 @@ const CreatePreOrder = () => {
     if (val === 'legacy' && legacyBankDetails) {
       setSelectedBank(legacyBankDetails);
     } else {
-      const found = companyBankAccounts.find(b => b._id === val);
-      if (found) {
+      const b = companyBankAccounts.find(x => x._id === val);
+      if (b) {
         setSelectedBank({
-          accountName: found.accountName,
-          accountNumber: found.accountNumber,
-          ifscCode: found.ifscCode,
-          bankName: found.bankName,
-          branchName: found.branchName
+          accountName: b.accountName,
+          accountNumber: b.accountNumber,
+          ifscCode: b.ifscCode,
+          bankName: b.bankName,
+          branchName: b.branchName
         });
       } else {
         setSelectedBank(null);
@@ -224,39 +230,37 @@ const CreatePreOrder = () => {
     }
   };
 
-  const handleCreateNewBankAccount = async (e) => {
+  const handleCreateBankAccount = async (e) => {
     e.preventDefault();
-    if (!form.company) return alert("Select company first");
     try {
       const res = await axios.post(`${API}/api/companies/${form.company}/bank-accounts`, newBankForm, { headers: authHeader });
-      const updatedAccounts = res.data;
-      setCompanyBankAccounts(updatedAccounts);
-      const newlyCreated = updatedAccounts[updatedAccounts.length - 1];
-      if (newlyCreated) {
-        setSelectedBankAccountId(newlyCreated._id);
+      setCompanyBankAccounts(res.data || []);
+      const created = (res.data || []).find(b => b.accountNumber === newBankForm.accountNumber) || res.data[res.data.length - 1];
+      if (created) {
+        setSelectedBankAccountId(created._id);
         setSelectedBank({
-          accountName: newlyCreated.accountName,
-          accountNumber: newlyCreated.accountNumber,
-          ifscCode: newlyCreated.ifscCode,
-          bankName: newlyCreated.bankName,
-          branchName: newlyCreated.branchName
+          accountName: created.accountName,
+          accountNumber: created.accountNumber,
+          ifscCode: created.ifscCode,
+          bankName: created.bankName,
+          branchName: created.branchName
         });
       }
       setBankModalOpen(false);
       setNewBankForm({ accountName: '', bankName: '', accountNumber: '', ifscCode: '', branchName: '', isDefault: false });
     } catch (err) {
-      alert(err.response?.data?.message || "Error adding bank account");
+      alert("Error adding bank account: " + (err.response?.data?.message || err.message));
     }
   };
 
   const handleInput = (e) => {
     const { name, value } = e.target;
     setForm((f) => {
-      const updated = { ...f, [name]: value };
-      if (name === "customerGSTIN" && value.length >= 2) {
-        const stateCode = value.substring(0, 2);
-        const matchedState = INDIAN_STATES.find((s) => s.startsWith(stateCode));
+      let updated = { ...f, [name]: value };
+      if (name === "customerState" && value) {
+        const matchedState = INDIAN_STATES.find(s => s.toLowerCase().includes(value.toLowerCase())) || value;
         if (matchedState) {
+          updated.customerState = matchedState;
           if (!f.customerState) updated.customerState = matchedState;
           if (!f.placeOfSupply) updated.placeOfSupply = matchedState;
         }
@@ -294,6 +298,11 @@ const CreatePreOrder = () => {
     if (cust) {
       const bAddr = cust.billingAddress || "";
       const sAddr = cust.shippingAddress || bAddr;
+      if (!cust.shippingAddress || bAddr === sAddr) {
+        setSameAsShipping(true);
+      } else {
+        setSameAsShipping(false);
+      }
       setForm((f) => ({
         ...f,
         customerName: cust.name,

@@ -184,8 +184,10 @@ const CreateDeliveryChallan = () => {
             convertedFromInvoice: dc.convertedFromInvoice || "",
           });
 
-          if (dc.shippingAddress === dc.billingAddress && dc.billingAddress) {
+          if (!dc.shippingAddress || dc.shippingAddress === dc.billingAddress) {
             setSameAsShipping(true);
+          } else {
+            setSameAsShipping(false);
           }
 
           if (dc.items && dc.items.length > 0) {
@@ -235,6 +237,11 @@ const CreateDeliveryChallan = () => {
     if (cust) {
       const bAddr = cust.billingAddress || "";
       const sAddr = cust.shippingAddress || bAddr;
+      if (!cust.shippingAddress || bAddr === sAddr) {
+        setSameAsShipping(true);
+      } else {
+        setSameAsShipping(false);
+      }
       setForm((f) => ({
         ...f,
         customerName: cust.name,

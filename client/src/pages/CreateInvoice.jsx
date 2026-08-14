@@ -201,6 +201,12 @@ const CreateInvoice = () => {
             termsConditions: inv.termsConditions || "",
           });
 
+          if (!inv.shippingAddress || inv.billingAddress === inv.shippingAddress) {
+            setSameAsShipping(true);
+          } else {
+            setSameAsShipping(false);
+          }
+
           if (inv.bankDetails && inv.bankDetails.bankName) {
             setSelectedBank(inv.bankDetails);
             setSelectedBankAccountId('saved');
@@ -354,14 +360,21 @@ const CreateInvoice = () => {
   const handleCustomerSelect = (val) => {
     const cust = combinedCustomers.find((c) => c.name.toLowerCase() === val.toLowerCase());
     if (cust) {
+      const bAddr = cust.billingAddress || "";
+      const sAddr = cust.shippingAddress || bAddr;
+      if (!cust.shippingAddress || bAddr === sAddr) {
+        setSameAsShipping(true);
+      } else {
+        setSameAsShipping(false);
+      }
       setForm((f) => ({
         ...f,
         customerName: cust.name,
         customerPhone: cust.phone || "",
         customerGSTIN: cust.gstin || "",
         customerState: cust.state || "",
-        billingAddress: cust.billingAddress || "",
-        shippingAddress: cust.shippingAddress || "",
+        billingAddress: bAddr,
+        shippingAddress: sAddr,
       }));
     } else {
       setForm((f) => ({ ...f, customerName: toProper(val) }));
