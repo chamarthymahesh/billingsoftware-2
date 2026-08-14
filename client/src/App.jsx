@@ -19,6 +19,9 @@ import Employees from "./pages/Employees";
 import Quotations from "./pages/Quotations";
 import CreateQuotation from "./pages/CreateQuotation";
 import ViewQuotation from "./pages/ViewQuotation";
+import PreOrders from "./pages/PreOrders";
+import CreatePreOrder from "./pages/CreatePreOrder";
+import ViewPreOrder from "./pages/ViewPreOrder";
 import DeliveryChallans from "./pages/DeliveryChallans";
 import CreateDeliveryChallan from "./pages/CreateDeliveryChallan";
 import ViewDeliveryChallan from "./pages/ViewDeliveryChallan";
@@ -82,6 +85,10 @@ function App() {
           <Route path="quotations/new" element={<CreateQuotation />} />
           <Route path="quotations/edit/:id" element={<CreateQuotation />} />
           <Route path="quotations/view/:id" element={<ViewQuotation />} />
+          <Route path="pre-orders" element={<PreOrders />} />
+          <Route path="pre-orders/new" element={<CreatePreOrder />} />
+          <Route path="pre-orders/edit/:id" element={<CreatePreOrder />} />
+          <Route path="pre-orders/view/:id" element={<ViewPreOrder />} />
           <Route path="delivery-challans" element={<DeliveryChallans />} />
           <Route path="delivery-challans/new" element={<CreateDeliveryChallan />} />
           <Route path="delivery-challans/edit/:id" element={<CreateDeliveryChallan />} />

@@ -14,6 +14,9 @@ const Purchases = () => {
   const [suppliers, setSuppliers] = useState([]);
 
   const [selectedCompany, setSelectedCompany] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,6 +25,7 @@ const Purchases = () => {
   const [viewingPurchase, setViewingPurchase] = useState(null);
 
   const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+  const isSuperAdmin = userInfo?.role === "Super Admin";
   const authHeader = { Authorization: `Bearer ${userInfo?.token}` };
 
   useEffect(() => {
@@ -34,7 +38,11 @@ const Purchases = () => {
         ]);
 
         setCompanies(compRes.data);
-        if (compRes.data.length > 0) setSelectedCompany(compRes.data[0]._id);
+        if (isSuperAdmin) {
+          setSelectedCompany("ALL");
+        } else if (compRes.data.length > 0) {
+          setSelectedCompany(compRes.data[0]._id);
+        }
 
         setSuppliers(suppRes.data);
         setProducts(prodRes.data);
@@ -51,7 +59,11 @@ const Purchases = () => {
     const fetchPurchases = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`${API}/api/purchases?companyId=${selectedCompany}`, { headers: authHeader });
+        let url = `${API}/api/purchases?companyId=${selectedCompany}`;
+        if (selectedMonth) url += `&month=${selectedMonth}`;
+        if (startDate) url += `&startDate=${startDate}`;
+        if (endDate) url += `&endDate=${endDate}`;
+        const res = await axios.get(url, { headers: authHeader });
         setPurchases(res.data);
       } catch (error) {
         console.error("Error fetching purchases:", error);
@@ -61,7 +73,7 @@ const Purchases = () => {
     };
 
     fetchPurchases();
-  }, [selectedCompany]);
+  }, [selectedCompany, selectedMonth, startDate, endDate]);
 
   const handlePurchaseAdded = (newPurchase) => {
     setPurchases((prev) => [newPurchase, ...prev]);
@@ -118,6 +130,21 @@ const Purchases = () => {
   };
 
   const filteredPurchases = purchases.filter((p) => {
+    // 1. Company Filter
+    if (selectedCompany && selectedCompany !== "ALL") {
+      const compId = p.targetCompany?._id || p.targetCompany;
+      if (compId && compId.toString() !== selectedCompany.toString()) return false;
+    }
+
+    // 2. Month / Date Range Filter
+    const dStr = p.purchaseDate ? p.purchaseDate.split("T")[0] : (p.createdAt ? p.createdAt.split("T")[0] : "");
+    if (dStr) {
+      if (selectedMonth && !dStr.startsWith(selectedMonth)) return false;
+      if (startDate && dStr < startDate) return false;
+      if (endDate && dStr > endDate) return false;
+    }
+
+    // 3. Search Filter
     const searchLower = search.toLowerCase();
     const matchesSupplier = (p.supplierName || "").toLowerCase().includes(searchLower);
     const matchesBill = (p.billNumber || "").toLowerCase().includes(searchLower);
@@ -196,8 +223,8 @@ const Purchases = () => {
       </div>
 
       {/* Toolbar */}
-      <div className="pur-toolbar">
-        <div className="pur-search">
+      <div className="pur-toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px' }}>
+        <div className="pur-search" style={{ flex: '1 1 240px', minWidth: '200px' }}>
           <Search size={16} className="pur-search-icon" />
           <input
             placeholder="Search by supplier, bill #, product, or GeM contract..."
@@ -205,19 +232,113 @@ const Purchases = () => {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        {userInfo.role === "Super Admin" && companies?.length > 0 && (
-          <select
-            className="pur-company-select"
-            value={selectedCompany}
-            onChange={(e) => setSelectedCompany(e.target.value)}
-          >
-            {companies.map((c) => (
-              <option key={c._id} value={c._id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        )}
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+          {/* Company Filter Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Company:</span>
+            <select
+              className="pur-company-select"
+              value={selectedCompany}
+              onChange={(e) => setSelectedCompany(e.target.value)}
+            >
+              {isSuperAdmin && <option value="ALL">All Companies</option>}
+              {companies.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Month Filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Month:</span>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => {
+                setSelectedMonth(e.target.value);
+                if (e.target.value) {
+                  setStartDate("");
+                  setEndDate("");
+                }
+              }}
+              style={{
+                background: '#1e293b',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                color: '#fff',
+                padding: '6px 10px',
+                fontSize: '13px'
+              }}
+            />
+          </div>
+
+          {/* Date Range Filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>From:</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                if (e.target.value) setSelectedMonth("");
+              }}
+              style={{
+                background: '#1e293b',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                color: '#fff',
+                padding: '6px 10px',
+                fontSize: '13px'
+              }}
+            />
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>To:</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                if (e.target.value) setSelectedMonth("");
+              }}
+              style={{
+                background: '#1e293b',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                color: '#fff',
+                padding: '6px 10px',
+                fontSize: '13px'
+              }}
+            />
+          </div>
+
+          {/* Clear Filters Button */}
+          {(selectedMonth || startDate || endDate || search || (isSuperAdmin && selectedCompany !== "ALL")) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedMonth("");
+                setStartDate("");
+                setEndDate("");
+                setSearch("");
+                if (isSuperAdmin) setSelectedCompany("ALL");
+              }}
+              style={{
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#ef4444',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Table */}

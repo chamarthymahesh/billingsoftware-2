@@ -180,17 +180,40 @@ const CreateQuotation = () => {
     setForm((f) => ({ ...f, [name]: value }));
   };
 
+  const combinedCustomers = [
+    ...customers.map((c) => ({
+      name: c.name,
+      phone: c.phone || "",
+      gstin: c.gstin || "",
+      state: c.state || "",
+      billingAddress: c.billingAddress || c.address || "",
+      shippingAddress: c.shippingAddress || c.billingAddress || c.address || "",
+      isCompany: false,
+    })),
+    ...companies.map((c) => ({
+      name: c.name,
+      phone: c.phone || "",
+      gstin: c.gstin || "",
+      state: c.state || "",
+      billingAddress: c.address || "",
+      shippingAddress: c.address || "",
+      isCompany: true,
+    })),
+  ];
+
   const handleCustomerSelect = (val) => {
-    const cust = customers.find((c) => c.name.toLowerCase() === val.toLowerCase());
+    const cust = combinedCustomers.find((c) => c.name.toLowerCase() === val.toLowerCase());
     if (cust) {
+      const bAddr = cust.billingAddress || "";
+      const sAddr = cust.shippingAddress || bAddr;
       setForm((f) => ({
         ...f,
         customerName: cust.name,
         customerPhone: cust.phone || "",
         customerGSTIN: cust.gstin || "",
         customerState: cust.state || "",
-        billingAddress: cust.address || "",
-        shippingAddress: sameAsShipping ? cust.address || "" : (f.shippingAddress || cust.address || ""),
+        billingAddress: bAddr,
+        shippingAddress: sAddr,
         placeOfSupply: cust.state || "",
       }));
     } else {
@@ -405,7 +428,7 @@ const CreateQuotation = () => {
     }
   };
 
-  const customerOptions = customers.map((c) => c.name);
+  const customerOptions = combinedCustomers.map((c) => c.name);
   const productOptions = products.map((p) => p.name);
 
   return (

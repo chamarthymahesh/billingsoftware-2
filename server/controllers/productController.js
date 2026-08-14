@@ -77,7 +77,7 @@ export const getProducts = async (req, res) => {
       doc.companyStocks = companyStocks;
       doc.universalStock = universalStock;
 
-      if (companyId) {
+      if (companyId && companyId !== 'ALL') {
         const match = companyStocks.find(cs => cs.companyId === companyId);
         doc.stock = match ? match.stock : 0;
         doc.totalPurchased = match ? match.totalPurchased : 0;

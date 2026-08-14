@@ -6,9 +6,25 @@ import { syncProductStock } from '../utils/stockSync.js';
 // GET /api/invoices?companyId=xxx
 const getInvoices = async (req, res) => {
   try {
-    const company = req.user.companyId || req.query.companyId;
-    if (!company) return res.status(400).json({ message: 'companyId required' });
-    const invoices = await Invoice.find({ company }).sort({ invoiceDate: -1 });
+    const company = req.user?.companyId || req.query.companyId;
+    let filter = {};
+    if (company && company !== 'ALL') {
+      filter.company = company;
+    }
+    const { startDate, endDate, month } = req.query;
+    if (startDate || endDate) {
+      filter.invoiceDate = {};
+      if (startDate) filter.invoiceDate.$gte = new Date(startDate);
+      if (endDate) filter.invoiceDate.$lte = new Date(endDate + 'T23:59:59.999Z');
+    } else if (month) {
+      const [yearStr, monthStr] = month.split('-');
+      const year = parseInt(yearStr, 10);
+      const m = parseInt(monthStr, 10) - 1;
+      const start = new Date(Date.UTC(year, m, 1, 0, 0, 0));
+      const end = new Date(Date.UTC(year, m + 1, 0, 23, 59, 59, 999));
+      filter.invoiceDate = { $gte: start, $lte: end };
+    }
+    const invoices = await Invoice.find(filter).populate('company').sort({ invoiceDate: -1 });
     res.json(invoices);
   } catch (err) {
     res.status(500).json({ message: err.message });

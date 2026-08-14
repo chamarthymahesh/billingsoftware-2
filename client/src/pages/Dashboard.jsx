@@ -14,7 +14,7 @@ const Dashboard = () => {
 
   const [totalCompanies, setTotalCompanies] = useState(0);
   const [companies, setCompanies] = useState([]);
-  const [excludeInternalTransfers, setExcludeInternalTransfers] = useState(false);
+  const [excludeInternalTransfers, setExcludeInternalTransfers] = useState(true);
   const [dashboardMonth, setDashboardMonth] = useState('');
   const [dashboardYear, setDashboardYear] = useState('');
   const [dashboardTimeRange, setDashboardTimeRange] = useState('all'); // 'all', 'today', 'yesterday', '7days', '30days', 'thisMonth', 'lastMonth', 'custom'
@@ -119,14 +119,30 @@ const Dashboard = () => {
       return true;
     };
 
+    const registeredCompanyNames = companies.map((c) => c.name?.toLowerCase().trim()).filter(Boolean);
+
+    const isInternalInvoice = (inv) => {
+      if (inv.isStockTransfer) return true;
+      if (inv.invoiceNumber?.startsWith("TRF-")) return true;
+      if (inv.customerName && registeredCompanyNames.includes(inv.customerName.toLowerCase().trim())) return true;
+      return false;
+    };
+
+    const isInternalPurchase = (p) => {
+      if (p.isStockTransfer) return true;
+      if (p.billNumber?.startsWith("TRF-")) return true;
+      if (p.supplierName && registeredCompanyNames.includes(p.supplierName.toLowerCase().trim())) return true;
+      return false;
+    };
+
     // Filter invoices and purchases based on toggle and date filters
     const filteredInvoices = allInvoices.filter((inv) => {
-      if (excludeInternalTransfers && (inv.invoiceNumber?.startsWith("TRF-OUT-") || inv.isStockTransfer)) return false;
+      if (excludeInternalTransfers && isInternalInvoice(inv)) return false;
       return applyDateFilters(inv.invoiceDate);
     });
 
     const filteredPurchases = allPurchases.filter((p) => {
-      if (excludeInternalTransfers && p.billNumber?.startsWith("TRF-IN-")) return false;
+      if (excludeInternalTransfers && isInternalPurchase(p)) return false;
       return applyDateFilters(p.purchaseDate || p.createdAt);
     });
 
@@ -858,12 +874,28 @@ const Dashboard = () => {
       {/* Detailed Company Customer/Vendor Breakdown Modal */}
       {selectedCompanyForBreakdown &&
         (() => {
+          const registeredCompanyNames = companies.map((c) => c.name?.toLowerCase().trim()).filter(Boolean);
+
+          const isInternalInvoice = (inv) => {
+            if (inv.isStockTransfer) return true;
+            if (inv.invoiceNumber?.startsWith("TRF-")) return true;
+            if (inv.customerName && registeredCompanyNames.includes(inv.customerName.toLowerCase().trim())) return true;
+            return false;
+          };
+
+          const isInternalPurchase = (p) => {
+            if (p.isStockTransfer) return true;
+            if (p.billNumber?.startsWith("TRF-")) return true;
+            if (p.supplierName && registeredCompanyNames.includes(p.supplierName.toLowerCase().trim())) return true;
+            return false;
+          };
+
           const filteredInvoices = excludeInternalTransfers
-            ? allInvoices.filter((inv) => !inv.invoiceNumber?.startsWith("TRF-OUT-") && !inv.isStockTransfer)
+            ? allInvoices.filter((inv) => !isInternalInvoice(inv))
             : allInvoices;
 
           const filteredPurchases = excludeInternalTransfers
-            ? allPurchases.filter((p) => !p.billNumber?.startsWith("TRF-IN-"))
+            ? allPurchases.filter((p) => !isInternalPurchase(p))
             : allPurchases;
 
           // Filter invoices for this company

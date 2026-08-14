@@ -26,6 +26,9 @@ const Products = () => {
   const [products, setProducts]     = useState([]);
   const [companies, setCompanies]   = useState([]);
   const [selectedCompany, setSelectedCompany] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [startDate, setStartDate]   = useState('');
+  const [endDate, setEndDate]       = useState('');
   const [loading, setLoading]       = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
@@ -33,6 +36,7 @@ const Products = () => {
   const [search, setSearch]         = useState('');
 
   const userInfo   = JSON.parse(localStorage.getItem('userInfo'));
+  const isSuperAdmin = userInfo?.role === 'Super Admin';
   const authHeader = { Authorization: `Bearer ${userInfo?.token}` };
 
   // Derived option lists from existing products (unique values in Proper Case)
@@ -43,18 +47,29 @@ const Products = () => {
 
   useEffect(() => {
     axios.get(`${API}/api/companies`, { headers: authHeader })
-      .then(r => { setCompanies(r.data); if (r.data.length > 0) setSelectedCompany(r.data[0]._id); })
+      .then(r => {
+        setCompanies(r.data);
+        if (isSuperAdmin) {
+          setSelectedCompany('ALL');
+        } else if (r.data.length > 0) {
+          setSelectedCompany(r.data[0]._id);
+        }
+      })
       .catch(console.error);
   }, []);
 
   useEffect(() => {
     if (!selectedCompany) return;
     setLoading(true);
-    axios.get(`${API}/api/products?companyId=${selectedCompany}`, { headers: authHeader })
+    let url = `${API}/api/products?companyId=${selectedCompany}`;
+    if (selectedMonth) url += `&month=${selectedMonth}`;
+    if (startDate) url += `&startDate=${startDate}`;
+    if (endDate) url += `&endDate=${endDate}`;
+    axios.get(url, { headers: authHeader })
       .then(r => setProducts(r.data))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [selectedCompany]);
+  }, [selectedCompany, selectedMonth, startDate, endDate]);
 
   const openAdd  = () => { setForm({ ...emptyForm }); setEditProduct(null); setIsModalOpen(true); };
   const openEdit = (p) => { setForm({ ...p }); setEditProduct(p); setIsModalOpen(true); };
@@ -104,12 +119,24 @@ const Products = () => {
     setProducts(ps => ps.filter(p => p._id !== id));
   };
 
-  const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.sku || '').toLowerCase().includes(search.toLowerCase()) ||
-    (p.category || '').toLowerCase().includes(search.toLowerCase()) ||
-    (p.brand || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = products.filter(p => {
+    // 1. Month / Date Range Filter (based on product creation date)
+    const dStr = p.createdAt ? p.createdAt.split('T')[0] : '';
+    if (dStr) {
+      if (selectedMonth && !dStr.startsWith(selectedMonth)) return false;
+      if (startDate && dStr < startDate) return false;
+      if (endDate && dStr > endDate) return false;
+    }
+
+    // 2. Search Filter
+    const searchLower = search.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(searchLower) ||
+      (p.sku || '').toLowerCase().includes(searchLower) ||
+      (p.category || '').toLowerCase().includes(searchLower) ||
+      (p.brand || '').toLowerCase().includes(searchLower)
+    );
+  });
 
   const getStockStatus = (p) => {
     if (p.stock === 0) return 'out';
@@ -153,14 +180,110 @@ const Products = () => {
       </div>
 
       {/* Toolbar */}
-      <div className="pr-toolbar">
-        <div className="pr-search">
+      <div className="pr-toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="pr-search" style={{ flex: '1 1 240px', minWidth: '200px' }}>
           <Search size={16} className="pr-search-icon" />
           <input placeholder="Search by name, SKU, brand or category…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <select className="pr-company-select" value={selectedCompany} onChange={e => setSelectedCompany(e.target.value)}>
-          {companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-        </select>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+          {/* Company Filter Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Company:</span>
+            <select className="pr-company-select" value={selectedCompany} onChange={e => setSelectedCompany(e.target.value)}>
+              {isSuperAdmin && <option value="ALL">All Companies</option>}
+              {companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+            </select>
+          </div>
+
+          {/* Month Filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Month:</span>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => {
+                setSelectedMonth(e.target.value);
+                if (e.target.value) {
+                  setStartDate("");
+                  setEndDate("");
+                }
+              }}
+              style={{
+                background: '#1e293b',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                color: '#fff',
+                padding: '6px 10px',
+                fontSize: '13px'
+              }}
+            />
+          </div>
+
+          {/* Date Range Filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>From:</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                if (e.target.value) setSelectedMonth("");
+              }}
+              style={{
+                background: '#1e293b',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                color: '#fff',
+                padding: '6px 10px',
+                fontSize: '13px'
+              }}
+            />
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>To:</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                if (e.target.value) setSelectedMonth("");
+              }}
+              style={{
+                background: '#1e293b',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                color: '#fff',
+                padding: '6px 10px',
+                fontSize: '13px'
+              }}
+            />
+          </div>
+
+          {/* Clear Filters Button */}
+          {(selectedMonth || startDate || endDate || search || (isSuperAdmin && selectedCompany !== "ALL")) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedMonth("");
+                setStartDate("");
+                setEndDate("");
+                setSearch("");
+                if (isSuperAdmin) setSelectedCompany("ALL");
+              }}
+              style={{
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#ef4444',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Table */}

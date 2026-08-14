@@ -70,13 +70,26 @@ export const createPurchase = async (req, res) => {
 // @access  Private
 export const getPurchases = async (req, res) => {
   try {
-    const targetCompany = req.user.companyId || req.query.companyId;
-    const filter = targetCompany ? { targetCompany } : {};
+    const targetCompany = req.user?.companyId || req.query.companyId;
+    const filter = (targetCompany && targetCompany !== 'ALL') ? { targetCompany } : {};
+    const { startDate, endDate, month } = req.query;
+    if (startDate || endDate) {
+      filter.purchaseDate = {};
+      if (startDate) filter.purchaseDate.$gte = new Date(startDate);
+      if (endDate) filter.purchaseDate.$lte = new Date(endDate + 'T23:59:59.999Z');
+    } else if (month) {
+      const [yearStr, monthStr] = month.split('-');
+      const year = parseInt(yearStr, 10);
+      const m = parseInt(monthStr, 10) - 1;
+      const start = new Date(Date.UTC(year, m, 1, 0, 0, 0));
+      const end = new Date(Date.UTC(year, m + 1, 0, 23, 59, 59, 999));
+      filter.purchaseDate = { $gte: start, $lte: end };
+    }
 
     const purchases = await Purchase.find(filter)
       .populate("targetCompany", "name gstin")
       .populate("items.product", "name category unit")
-      .sort({ createdAt: -1 });
+      .sort({ purchaseDate: -1, createdAt: -1 });
 
     res.json(purchases);
   } catch (error) {
@@ -333,6 +346,7 @@ export const transferStock = async (req, res) => {
       billNumber: nextInvoiceNumber,
       purchaseDate: new Date(),
       paymentStatus: "Paid",
+      isStockTransfer: true,
       itemsTotal: total,
       extraCharges: 0,
       grandTotal: Math.round(total),

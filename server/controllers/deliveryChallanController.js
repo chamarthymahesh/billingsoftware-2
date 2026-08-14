@@ -4,9 +4,25 @@ import { getStateWithCode } from '../utils/stateHelper.js';
 // GET /api/delivery-challans?companyId=xxx
 export const getDeliveryChallans = async (req, res) => {
   try {
-    const company = req.user.companyId || req.query.companyId;
-    if (!company) return res.status(400).json({ message: 'companyId required' });
-    const challans = await DeliveryChallan.find({ company }).sort({ challanDate: -1 });
+    const company = req.user?.companyId || req.query.companyId;
+    let filter = {};
+    if (company && company !== 'ALL') {
+      filter.company = company;
+    }
+    const { startDate, endDate, month } = req.query;
+    if (startDate || endDate) {
+      filter.challanDate = {};
+      if (startDate) filter.challanDate.$gte = new Date(startDate);
+      if (endDate) filter.challanDate.$lte = new Date(endDate + 'T23:59:59.999Z');
+    } else if (month) {
+      const [yearStr, monthStr] = month.split('-');
+      const year = parseInt(yearStr, 10);
+      const m = parseInt(monthStr, 10) - 1;
+      const start = new Date(Date.UTC(year, m, 1, 0, 0, 0));
+      const end = new Date(Date.UTC(year, m + 1, 0, 23, 59, 59, 999));
+      filter.challanDate = { $gte: start, $lte: end };
+    }
+    const challans = await DeliveryChallan.find(filter).populate('company').sort({ challanDate: -1 });
     res.json(challans);
   } catch (err) {
     res.status(500).json({ message: err.message });

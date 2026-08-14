@@ -28,6 +28,7 @@ const purchaseSchema = mongoose.Schema({
   extraCharges: { type: Number, required: true },
   adjustment: { type: Number, default: 0 },
   grandTotal: { type: Number, required: true },
+  isStockTransfer: { type: Boolean, default: false },
 }, { timestamps: true });
 
 export default mongoose.model('Purchase', purchaseSchema);

@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Plus, TrendingUp, DollarSign, FileText, CheckCircle, Search, Eye, Edit, Trash2, Calendar, Receipt } from "lucide-react";
+import { Plus, TrendingUp, FileText, CheckCircle, Search, Eye, Edit, Trash2, Clock } from "lucide-react";
 import "./Sales.css"; // Reuse the beautiful layout styling of Sales.jsx
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-const Quotations = () => {
+const PreOrders = () => {
   const navigate = useNavigate();
-  const [quotations, setQuotations] = useState([]);
+  const [preOrders, setPreOrders] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
@@ -40,44 +40,44 @@ const Quotations = () => {
 
   useEffect(() => {
     if (!selectedCompany) return;
-    const fetchQuotations = async () => {
+    const fetchPreOrders = async () => {
       setLoading(true);
       try {
-        let url = `${API}/api/quotations?companyId=${selectedCompany}`;
+        let url = `${API}/api/pre-orders?companyId=${selectedCompany}`;
         if (selectedMonth) url += `&month=${selectedMonth}`;
         if (startDate) url += `&startDate=${startDate}`;
         if (endDate) url += `&endDate=${endDate}`;
         const res = await axios.get(url, { headers: authHeader });
-        setQuotations(res.data);
+        setPreOrders(res.data);
       } catch (err) {
-        setQuotations([]);
-        console.error("Quotations fetch error:", err);
+        setPreOrders([]);
+        console.error("Pre-orders fetch error:", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchQuotations();
+    fetchPreOrders();
   }, [selectedCompany, selectedMonth, startDate, endDate]);
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this quotation?")) return;
+    if (!window.confirm("Are you sure you want to delete this pre-order?")) return;
     try {
-      await axios.delete(`${API}/api/quotations/${id}`, { headers: authHeader });
-      setQuotations(prev => prev.filter(q => q._id !== id));
+      await axios.delete(`${API}/api/pre-orders/${id}`, { headers: authHeader });
+      setPreOrders(prev => prev.filter(p => p._id !== id));
     } catch (err) {
-      alert("Error deleting quotation");
+      alert("Error deleting pre-order");
     }
   };
 
-  const filtered = quotations.filter((q) => {
+  const filtered = preOrders.filter((p) => {
     // 1. Company Filter
     if (selectedCompany && selectedCompany !== "ALL") {
-      const compId = q.company?._id || q.company;
+      const compId = p.company?._id || p.company;
       if (compId && compId.toString() !== selectedCompany.toString()) return false;
     }
 
     // 2. Month / Date Range Filter
-    const dStr = q.quotationDate ? q.quotationDate.split("T")[0] : "";
+    const dStr = p.preOrderDate ? p.preOrderDate.split("T")[0] : "";
     if (dStr) {
       if (selectedMonth && !dStr.startsWith(selectedMonth)) return false;
       if (startDate && dStr < startDate) return false;
@@ -86,31 +86,32 @@ const Quotations = () => {
 
     // 3. Search Filter
     const searchLower = search.toLowerCase();
-    const matchesCustomer = (q.customerName || "").toLowerCase().includes(searchLower);
-    const matchesNumber = (q.quotationNumber || "").toLowerCase().includes(searchLower);
-    const matchesProduct = q.items?.some((item) => (item.productName || "").toLowerCase().includes(searchLower));
+    const matchesCustomer = (p.customerName || "").toLowerCase().includes(searchLower);
+    const matchesNumber = (p.preOrderNumber || "").toLowerCase().includes(searchLower);
+    const matchesProduct = p.items?.some((item) => (item.productName || "").toLowerCase().includes(searchLower));
     return matchesCustomer || matchesNumber || matchesProduct;
   });
 
-  // Calculate Quotation Statistics
-  const totalQuotationsCount = quotations.length;
-  const totalQuotationsValue = quotations.reduce((sum, q) => sum + (q.grandTotal || 0), 0);
+  // Calculate Pre-Order Statistics
+  const totalPreOrdersCount = preOrders.length;
+  const totalPreOrdersValue = preOrders.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
 
-  const expectedOrders = quotations.filter(q => q.isExpectedOrder);
-  const expectedCount = expectedOrders.length;
-  const expectedValue = expectedOrders.reduce((sum, q) => sum + (q.grandTotal || 0), 0);
+  const confirmedPreOrders = preOrders.filter(p => p.status === 'Confirmed' || p.status === 'Processing');
+  const confirmedCount = confirmedPreOrders.length;
+  const confirmedValue = confirmedPreOrders.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
 
-  const acceptedQuotations = quotations.filter(q => q.status === 'Accepted');
-  const acceptedCount = acceptedQuotations.length;
-  const acceptedValue = acceptedQuotations.reduce((sum, q) => sum + (q.grandTotal || 0), 0);
+  const completedPreOrders = preOrders.filter(p => p.status === 'Completed');
+  const completedCount = completedPreOrders.length;
+  const completedValue = completedPreOrders.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
 
   const getStatusClass = (status) => {
     switch (status) {
-      case "Accepted":
+      case "Completed":
         return "sl-status-paid"; // Green styling
-      case "Declined":
+      case "Cancelled":
         return "sl-status-pending"; // Red/Warning styling
-      case "Sent":
+      case "Confirmed":
+      case "Processing":
         return "sl-status-partial"; // Blue/Neutral styling
       default:
         return "sl-status-pending";
@@ -122,8 +123,8 @@ const Quotations = () => {
       {/* Header */}
       <div className="sl-header">
         <div>
-          <h1 className="sl-title">Quotations</h1>
-          <p className="sl-subtitle">Manage customer quotations, track pipeline & expected orders</p>
+          <h1 className="sl-title">Pre Orders</h1>
+          <p className="sl-subtitle">Manage advance pre-orders without affecting stock inventory</p>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           {companies.length > 1 && (
@@ -139,9 +140,9 @@ const Quotations = () => {
               ))}
             </select>
           )}
-          <button onClick={() => navigate("/quotations/new")} className="sl-new-btn">
+          <button onClick={() => navigate("/pre-orders/new")} className="sl-new-btn">
             <Plus size={18} />
-            Create Quotation
+            Create Pre Order
           </button>
         </div>
       </div>
@@ -153,20 +154,20 @@ const Quotations = () => {
             <FileText size={22} />
           </div>
           <div>
-            <div className="sl-stat-label">Total Quotations</div>
-            <div className="sl-stat-value">₹{totalQuotationsValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
-            <div className="sl-stat-desc">{totalQuotationsCount} draft/sent proposals</div>
+            <div className="sl-stat-label">Total Pre Orders</div>
+            <div className="sl-stat-value">₹{totalPreOrdersValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+            <div className="sl-stat-desc">{totalPreOrdersCount} total pre orders</div>
           </div>
         </div>
 
         <div className="sl-stat">
           <div className="sl-stat-icon" style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b" }}>
-            <TrendingUp size={22} />
+            <Clock size={22} />
           </div>
           <div>
-            <div className="sl-stat-label">Expected Orders</div>
-            <div className="sl-stat-value">₹{expectedValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
-            <div className="sl-stat-desc">{expectedCount} high-probability orders</div>
+            <div className="sl-stat-label">Confirmed / Processing</div>
+            <div className="sl-stat-value">₹{confirmedValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+            <div className="sl-stat-desc">{confirmedCount} active pre-orders</div>
           </div>
         </div>
 
@@ -175,9 +176,9 @@ const Quotations = () => {
             <CheckCircle size={22} />
           </div>
           <div>
-            <div className="sl-stat-label">Converted / Won</div>
-            <div className="sl-stat-value">₹{acceptedValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
-            <div className="sl-stat-desc">{acceptedCount} quotation conversions</div>
+            <div className="sl-stat-label">Completed</div>
+            <div className="sl-stat-value">₹{completedValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+            <div className="sl-stat-desc">{completedCount} fulfilled pre-orders</div>
           </div>
         </div>
       </div>
@@ -188,7 +189,7 @@ const Quotations = () => {
           <Search size={18} className="sl-search-icon" />
           <input
             type="text"
-            placeholder="Search by quotation #, customer or product..."
+            placeholder="Search by pre-order #, customer or product..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -305,62 +306,37 @@ const Quotations = () => {
       {/* Main Table */}
       <div className="sl-table-wrap">
         {loading ? (
-          <div className="sl-center" style={{ padding: '40px' }}>Loading quotations...</div>
+          <div className="sl-center" style={{ padding: '40px' }}>Loading pre-orders...</div>
         ) : filtered.length === 0 ? (
-          <div className="sl-center" style={{ padding: '40px' }}>No quotations found. Click "Create Quotation" to start.</div>
+          <div className="sl-center" style={{ padding: '40px' }}>No pre-orders found. Click "Create Pre Order" to start.</div>
         ) : (
           <table className="sl-table">
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Quotation #</th>
+                <th>Pre Order #</th>
                 <th>Customer Name</th>
                 <th>Amount</th>
                 <th>Status</th>
-                <th>Expected Order</th>
                 <th style={{ textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((q) => (
-                <tr key={q._id}>
-                  <td>{new Date(q.quotationDate).toLocaleDateString("en-IN")}</td>
+              {filtered.map((p) => (
+                <tr key={p._id}>
+                  <td>{new Date(p.preOrderDate).toLocaleDateString("en-IN")}</td>
                   <td>
-                    <span className="sl-code">{q.quotationNumber}</span>
+                    <span className="sl-code">{p.preOrderNumber}</span>
                   </td>
-                  <td>{q.customerName}</td>
-                  <td>₹{(q.grandTotal || 0).toFixed(2)}</td>
+                  <td>{p.customerName}</td>
+                  <td>₹{(p.grandTotal || 0).toFixed(2)}</td>
                   <td>
-                    <span className={`sl-status ${getStatusClass(q.status)}`}>
-                      {q.status}
+                    <span className={`sl-status ${getStatusClass(p.status)}`}>
+                      {p.status}
                     </span>
-                  </td>
-                  <td>
-                    {q.isExpectedOrder ? (
-                      <span className="sl-badge-transfer" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>
-                        Expected Order
-                      </span>
-                    ) : (
-                      <span style={{ color: '#64748b', fontSize: '11px' }}>No</span>
-                    )}
                   </td>
                   <td style={{ textAlign: "right" }}>
                     <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", minWidth: "80px" }}>
-                      {q.status !== 'Accepted' && (
-                        <button
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            color: "#10b981",
-                            cursor: "pointer",
-                            padding: 0,
-                          }}
-                          onClick={() => navigate(`/sales/new?fromQuotation=${q._id}`)}
-                          title="Convert to Sales Invoice"
-                        >
-                          <Receipt size={18} />
-                        </button>
-                      )}
                       <button
                         style={{
                           background: "transparent",
@@ -369,8 +345,8 @@ const Quotations = () => {
                           cursor: "pointer",
                           padding: 0,
                         }}
-                        onClick={() => navigate(`/quotations/view/${q._id}`)}
-                        title="View Quotation"
+                        onClick={() => navigate(`/pre-orders/view/${p._id}`)}
+                        title="View Pre Order"
                       >
                         <Eye size={18} />
                       </button>
@@ -382,8 +358,8 @@ const Quotations = () => {
                           cursor: "pointer",
                           padding: 0,
                         }}
-                        onClick={() => navigate(`/quotations/edit/${q._id}`)}
-                        title="Edit Quotation"
+                        onClick={() => navigate(`/pre-orders/edit/${p._id}`)}
+                        title="Edit Pre Order"
                       >
                         <Edit size={18} />
                       </button>
@@ -395,8 +371,8 @@ const Quotations = () => {
                           cursor: "pointer",
                           padding: 0,
                         }}
-                        onClick={() => handleDelete(q._id)}
-                        title="Delete Quotation"
+                        onClick={() => handleDelete(p._id)}
+                        title="Delete Pre Order"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -412,4 +388,4 @@ const Quotations = () => {
   );
 };
 
-export default Quotations;
+export default PreOrders;

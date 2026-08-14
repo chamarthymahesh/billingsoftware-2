@@ -11,10 +11,14 @@ const DeliveryChallans = () => {
   const [challans, setChallans] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
 
   const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+  const isSuperAdmin = userInfo?.role === "Super Admin";
   const authHeader = { Authorization: `Bearer ${userInfo?.token}` };
 
   useEffect(() => {
@@ -22,7 +26,11 @@ const DeliveryChallans = () => {
       try {
         const res = await axios.get(`${API}/api/companies`, { headers: authHeader });
         setCompanies(res.data);
-        if (res.data.length > 0) setSelectedCompany(res.data[0]._id);
+        if (isSuperAdmin) {
+          setSelectedCompany("ALL");
+        } else if (res.data.length > 0) {
+          setSelectedCompany(res.data[0]._id);
+        }
       } catch (err) {
         console.error("Error fetching companies:", err);
       }
@@ -35,7 +43,11 @@ const DeliveryChallans = () => {
     const fetchChallans = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`${API}/api/delivery-challans?companyId=${selectedCompany}`, { headers: authHeader });
+        let url = `${API}/api/delivery-challans?companyId=${selectedCompany}`;
+        if (selectedMonth) url += `&month=${selectedMonth}`;
+        if (startDate) url += `&startDate=${startDate}`;
+        if (endDate) url += `&endDate=${endDate}`;
+        const res = await axios.get(url, { headers: authHeader });
         setChallans(res.data);
       } catch (err) {
         setChallans([]);
@@ -45,7 +57,7 @@ const DeliveryChallans = () => {
       }
     };
     fetchChallans();
-  }, [selectedCompany]);
+  }, [selectedCompany, selectedMonth, startDate, endDate]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this delivery challan?")) return;
@@ -58,6 +70,21 @@ const DeliveryChallans = () => {
   };
 
   const filtered = challans.filter((c) => {
+    // 1. Company Filter
+    if (selectedCompany && selectedCompany !== "ALL") {
+      const compId = c.company?._id || c.company;
+      if (compId && compId.toString() !== selectedCompany.toString()) return false;
+    }
+
+    // 2. Month / Date Range Filter
+    const dStr = c.challanDate ? c.challanDate.split("T")[0] : "";
+    if (dStr) {
+      if (selectedMonth && !dStr.startsWith(selectedMonth)) return false;
+      if (startDate && dStr < startDate) return false;
+      if (endDate && dStr > endDate) return false;
+    }
+
+    // 3. Search Filter
     const searchLower = search.toLowerCase();
     const matchesCustomer = (c.customerName || "").toLowerCase().includes(searchLower);
     const matchesNumber = (c.challanNumber || "").toLowerCase().includes(searchLower);
@@ -126,8 +153,8 @@ const DeliveryChallans = () => {
       </div>
 
       {/* Filters Toolbar */}
-      <div className="sl-toolbar" style={{ justifyContent: 'space-between', padding: '12px 20px' }}>
-        <div className="sl-search">
+      <div className="sl-toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px' }}>
+        <div className="sl-search" style={{ flex: '1 1 240px', minWidth: '200px' }}>
           <Search size={18} className="sl-search-icon" />
           <input
             type="text"
@@ -135,6 +162,113 @@ const DeliveryChallans = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+          {/* Company Filter Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Company:</span>
+            <select
+              className="sl-company-select"
+              value={selectedCompany}
+              onChange={(e) => setSelectedCompany(e.target.value)}
+            >
+              {isSuperAdmin && <option value="ALL">All Companies</option>}
+              {companies.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Month Filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Month:</span>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => {
+                setSelectedMonth(e.target.value);
+                if (e.target.value) {
+                  setStartDate("");
+                  setEndDate("");
+                }
+              }}
+              style={{
+                background: '#1e293b',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                color: '#fff',
+                padding: '6px 10px',
+                fontSize: '13px'
+              }}
+            />
+          </div>
+
+          {/* Date Range Filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>From:</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                if (e.target.value) setSelectedMonth("");
+              }}
+              style={{
+                background: '#1e293b',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                color: '#fff',
+                padding: '6px 10px',
+                fontSize: '13px'
+              }}
+            />
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>To:</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                if (e.target.value) setSelectedMonth("");
+              }}
+              style={{
+                background: '#1e293b',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                color: '#fff',
+                padding: '6px 10px',
+                fontSize: '13px'
+              }}
+            />
+          </div>
+
+          {/* Clear Filters Button */}
+          {(selectedMonth || startDate || endDate || search || (isSuperAdmin && selectedCompany !== "ALL")) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedMonth("");
+                setStartDate("");
+                setEndDate("");
+                setSearch("");
+                if (isSuperAdmin) setSelectedCompany("ALL");
+              }}
+              style={{
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#ef4444',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
       </div>
 
