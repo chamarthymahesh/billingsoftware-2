@@ -59,7 +59,6 @@ const Login = () => {
             type="button"
             style={{
               flex: 1,
-              border: "none",
               background: loginType === "billing" ? "rgba(99, 102, 241, 0.2)" : "transparent",
               color: loginType === "billing" ? "#818CF8" : "#94A3B8",
               padding: "0.5rem",
@@ -78,7 +77,6 @@ const Login = () => {
             type="button"
             style={{
               flex: 1,
-              border: "none",
               background: loginType === "personal" ? "rgba(99, 102, 241, 0.2)" : "transparent",
               color: loginType === "personal" ? "#818CF8" : "#94A3B8",
               padding: "0.5rem",

@@ -46,7 +46,7 @@ const InsuranceSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Pre-save hook to set default dueDate and compute endDate if missing
-InsuranceSchema.pre('save', function (next) {
+InsuranceSchema.pre('save', function () {
   // this refers to the document
   if (!this.dueDate && this.startDate) {
     this.dueDate = this.startDate;
@@ -56,7 +56,6 @@ InsuranceSchema.pre('save', function (next) {
     end.setFullYear(end.getFullYear() + this.termYears);
     this.endDate = end;
   }
-  next();
 });
 
 // 3. Interest Loans Model (Lent or Borrowed money)
