@@ -9,21 +9,49 @@ import "./CreateInvoice.css";
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const toProperCase = (str) => {
-  if (typeof str !== 'string') return '';
+  if (typeof str !== "string") return "";
   return str.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
 };
 
 const INDIAN_STATES = [
-  "01 - Jammu & Kashmir", "02 - Himachal Pradesh", "03 - Punjab", "04 - Chandigarh",
-  "05 - Uttarakhand", "06 - Haryana", "07 - Delhi", "08 - Rajasthan",
-  "09 - Uttar Pradesh", "10 - Bihar", "11 - Sikkim", "12 - Arunachal Pradesh",
-  "13 - Nagaland", "14 - Manipur", "15 - Mizoram", "16 - Tripura",
-  "17 - Meghalaya", "18 - Assam", "19 - West Bengal", "20 - Jharkhand",
-  "21 - Odisha", "22 - Chhattisgarh", "23 - Madhya Pradesh", "24 - Gujarat",
-  "25 - Daman & Diu", "26 - Dadra & Nagar Haveli", "27 - Maharashtra",
-  "29 - Karnataka", "30 - Goa", "31 - Lakshadweep", "32 - Kerala",
-  "33 - Tamil Nadu", "34 - Puducherry", "35 - Andaman & Nicobar Islands",
-  "36 - Telangana", "37 - Andhra Pradesh", "38 - Ladakh", "97 - Other Territory"
+  "01 - Jammu & Kashmir",
+  "02 - Himachal Pradesh",
+  "03 - Punjab",
+  "04 - Chandigarh",
+  "05 - Uttarakhand",
+  "06 - Haryana",
+  "07 - Delhi",
+  "08 - Rajasthan",
+  "09 - Uttar Pradesh",
+  "10 - Bihar",
+  "11 - Sikkim",
+  "12 - Arunachal Pradesh",
+  "13 - Nagaland",
+  "14 - Manipur",
+  "15 - Mizoram",
+  "16 - Tripura",
+  "17 - Meghalaya",
+  "18 - Assam",
+  "19 - West Bengal",
+  "20 - Jharkhand",
+  "21 - Odisha",
+  "22 - Chhattisgarh",
+  "23 - Madhya Pradesh",
+  "24 - Gujarat",
+  "25 - Daman & Diu",
+  "26 - Dadra & Nagar Haveli",
+  "27 - Maharashtra",
+  "29 - Karnataka",
+  "30 - Goa",
+  "31 - Lakshadweep",
+  "32 - Kerala",
+  "33 - Tamil Nadu",
+  "34 - Puducherry",
+  "35 - Andaman & Nicobar Islands",
+  "36 - Telangana",
+  "37 - Andhra Pradesh",
+  "38 - Ladakh",
+  "97 - Other Territory",
 ];
 
 const GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
@@ -86,7 +114,8 @@ const CreatePurchaseOrder = () => {
     adjustment: 0,
     notes: "",
     status: "Issued",
-    termsConditions: "1. Please deliver goods according to the specifications.\n2. Invoices must reference this PO number.",
+    termsConditions:
+      "1. Please deliver goods according to the specifications.\n2. Invoices must reference this PO number.",
   });
 
   const [items, setItems] = useState([makeItem()]);
@@ -109,7 +138,7 @@ const CreatePurchaseOrder = () => {
 
         setCompanies(compRes.data || []);
         if (compRes.data?.length > 0 && !form.company) {
-          setForm(prev => ({ ...prev, company: compRes.data[0]._id }));
+          setForm((prev) => ({ ...prev, company: compRes.data[0]._id }));
         }
 
         setProducts(prodRes.data || []);
@@ -128,9 +157,11 @@ const CreatePurchaseOrder = () => {
     if (id || !form.company) return;
     const fetchNextNumber = async () => {
       try {
-        const res = await axios.get(`${API}/api/purchase-orders/next-number?companyId=${form.company}`, { headers: authHeader });
+        const res = await axios.get(`${API}/api/purchase-orders/next-number?companyId=${form.company}`, {
+          headers: authHeader,
+        });
         if (res.data?.poNumber) {
-          setForm(prev => ({ ...prev, poNumber: res.data.poNumber }));
+          setForm((prev) => ({ ...prev, poNumber: res.data.poNumber }));
         }
       } catch (err) {
         console.error("Error fetching PO number:", err);
@@ -167,22 +198,24 @@ const CreatePurchaseOrder = () => {
         });
 
         if (po.items && po.items.length > 0) {
-          setItems(po.items.map(item => ({
-            id: item._id || Date.now() + Math.random().toString(),
-            product: item.product?._id || item.product || "",
-            productName: item.productName || item.product?.name || "",
-            hsnCode: item.hsnCode || "",
-            unit: item.unit || "Pcs",
-            qty: item.qty || 1,
-            rate: item.rate || 0,
-            mrp: item.mrp || 0,
-            discount: item.discount || 0,
-            gstRate: item.gstRate !== undefined ? item.gstRate : 18,
-            isInclusive: Boolean(item.isInclusive),
-            taxableAmount: item.taxableAmount || 0,
-            taxAmount: item.taxAmount || 0,
-            total: item.total || calcItemTotal(item),
-          })));
+          setItems(
+            po.items.map((item) => ({
+              id: item._id || Date.now() + Math.random().toString(),
+              product: item.product?._id || item.product || "",
+              productName: item.productName || item.product?.name || "",
+              hsnCode: item.hsnCode || "",
+              unit: item.unit || "Pcs",
+              qty: item.qty || 1,
+              rate: item.rate || 0,
+              mrp: item.mrp || 0,
+              discount: item.discount || 0,
+              gstRate: item.gstRate !== undefined ? item.gstRate : 18,
+              isInclusive: Boolean(item.isInclusive),
+              taxableAmount: item.taxableAmount || 0,
+              taxAmount: item.taxAmount || 0,
+              total: item.total || calcItemTotal(item),
+            })),
+          );
         }
       } catch (err) {
         console.error("Error loading PO for edit:", err);
@@ -196,83 +229,98 @@ const CreatePurchaseOrder = () => {
   const combinedSuppliersMap = new Map();
 
   const addSupplierToMap = (name, gstin, phone, address, state) => {
-    if (!name || typeof name !== 'string') return;
+    if (!name || typeof name !== "string") return;
     const key = name.trim().toLowerCase();
     if (!key) return;
 
     const existing = combinedSuppliersMap.get(key) || {
       name: toProperCase(name.trim()),
-      gstin: '',
-      phone: '',
-      address: '',
-      state: '',
+      gstin: "",
+      phone: "",
+      address: "",
+      state: "",
     };
+
+    const newGstin = typeof gstin === "string" && gstin.trim() ? gstin.trim() : existing.gstin;
+    const newPhone = typeof phone === "string" && phone.trim() ? phone.trim() : existing.phone;
+    const newAddress = typeof address === "string" && address.trim() ? address.trim() : existing.address;
+    const newState = typeof state === "string" && state.trim() ? state.trim() : existing.state;
 
     combinedSuppliersMap.set(key, {
       name: existing.name || toProperCase(name.trim()),
-      gstin: gstin || existing.gstin || '',
-      phone: phone || existing.phone || '',
-      address: address || existing.address || '',
-      state: state || existing.state || '',
+      gstin: newGstin || "",
+      phone: newPhone || "",
+      address: newAddress || "",
+      state: newState || "",
     });
   };
 
-  suppliers.forEach(s => {
-    const name = typeof s === 'string' ? s : s.name;
-    const gstin = typeof s === 'object' ? s.gstin : '';
-    const phone = typeof s === 'object' ? s.phone : '';
-    const address = typeof s === 'object' ? (s.address || s.billingAddress) : '';
-    const state = typeof s === 'object' ? (s.state || s.supplierState) : '';
+  suppliers.forEach((s) => {
+    const name = typeof s === "string" ? s : s?.name;
+    const gstin = typeof s === "object" ? s?.gstin : "";
+    const phone = typeof s === "object" ? s?.phone : "";
+    const address = typeof s === "object" ? s?.address || s?.billingAddress || s?.supplierAddress : "";
+    const state = typeof s === "object" ? s?.state || s?.supplierState : "";
     addSupplierToMap(name, gstin, phone, address, state);
   });
 
-  companies.forEach(c => {
-    addSupplierToMap(c.name, c.gstin, c.phone, c.address, c.state);
+  companies.forEach((c) => {
+    addSupplierToMap(c?.name, c?.gstin, c?.phone, c?.address, c?.state);
   });
 
-  purchases.forEach(p => {
-    addSupplierToMap(p.supplierName, p.supplierGSTIN, p.supplierPhone, p.billingAddress, p.supplierState);
+  purchases.forEach((p) => {
+    addSupplierToMap(p?.supplierName, p?.supplierGSTIN, p?.supplierPhone, p?.billingAddress, p?.supplierState);
   });
 
-  purchaseOrders.forEach(po => {
-    addSupplierToMap(po.supplierName, po.supplierGSTIN, po.supplierPhone, po.billingAddress, po.supplierState);
+  purchaseOrders.forEach((po) => {
+    addSupplierToMap(po?.supplierName, po?.supplierGSTIN, po?.supplierPhone, po?.billingAddress, po?.supplierState);
   });
 
   const combinedSuppliers = Array.from(combinedSuppliersMap.values());
-  const supplierOptions = combinedSuppliers.map(s => s.name);
-  const productOptions = [...new Set(products.map(p => toProperCase(p.name)))].filter(Boolean);
+  const supplierOptions = combinedSuppliers.map((s) => s.name);
+  const productOptions = [...new Set(products.map((p) => toProperCase(p.name)))].filter(Boolean);
 
   // Supplier selection handling (auto-fills GSTIN, Phone, Address, State)
   const handleSupplierSelect = (val) => {
-    if (!val) return;
+    if (!val) {
+      setForm((prev) => ({
+        ...prev,
+        supplierName: "",
+        supplierGSTIN: "",
+        supplierPhone: "",
+        billingAddress: "",
+        supplierState: "",
+      }));
+      return;
+    }
     const key = val.trim().toLowerCase();
-    const matched = combinedSuppliersMap.get(key) || combinedSuppliers.find(s => s.name.toLowerCase() === key);
+    const matched = combinedSuppliersMap.get(key) || combinedSuppliers.find((s) => s.name.toLowerCase() === key);
 
     if (matched) {
-      setForm(prev => ({
+      setForm((prev) => ({
         ...prev,
         supplierName: matched.name,
-        supplierGSTIN: matched.gstin || '',
-        supplierPhone: matched.phone || '',
-        billingAddress: matched.address || '',
-        supplierState: matched.state || prev.supplierState,
+        supplierGSTIN: matched.gstin || "",
+        supplierPhone: matched.phone || "",
+        billingAddress: matched.address || "",
+        supplierState: matched.state || "",
       }));
     } else {
-      setForm(prev => ({ ...prev, supplierName: toProperCase(val) }));
+      setForm((prev) => ({ ...prev, supplierName: toProperCase(val) }));
     }
   };
 
   // Item change handling (similar to Purchase Invoice)
   const handleItemChange = (id, field, value) => {
-    setItems(prevItems =>
-      prevItems.map(item => {
+    setItems((prevItems) =>
+      prevItems.map((item) => {
         if (item.id !== id) return item;
         let updated = { ...item, [field]: value };
 
         // Product selection auto-fill
         if (field === "productName") {
           updated.productName = toProperCase(value);
-          const found = products.find(p => p.name.toLowerCase() === value.toLowerCase());
+          const found = products.find((p) => p.name.toLowerCase() === value.toLowerCase());
           if (found) {
             updated.product = found._id;
             updated.hsnCode = found.hsnCode || "";
@@ -291,7 +339,7 @@ const CreatePurchaseOrder = () => {
           const qty = parseFloat(item.qty) || 0;
           const gst = parseFloat(item.gstRate) || 0;
           if (qty > 0) {
-            let newRate = updated.isInclusive ? (newTotal / qty) : (newTotal / (qty * (1 + gst / 100)));
+            let newRate = updated.isInclusive ? newTotal / qty : newTotal / (qty * (1 + gst / 100));
             updated.rate = Number(newRate.toFixed(2));
           }
           updated.total = value;
@@ -300,41 +348,43 @@ const CreatePurchaseOrder = () => {
         }
 
         return updated;
-      })
+      }),
     );
   };
 
   const handleQuickProductCreated = (newProduct) => {
-    setProducts(prev => [newProduct, ...prev]);
-    setItems(prev => prev.map(item => {
-      if (item.id === activeRowIdForQuickProduct) {
-        let updated = {
-          ...item,
-          productName: newProduct.name,
-          product: newProduct._id,
-          hsnCode: newProduct.hsnCode || "",
-          unit: newProduct.unit || "Pcs",
-          rate: newProduct.purchasePrice || 0,
-          gstRate: newProduct.gstRate !== undefined ? newProduct.gstRate : 18,
-          isInclusive: false,
-        };
-        updated.total = calcItemTotal(updated);
-        return updated;
-      }
-      return item;
-    }));
+    setProducts((prev) => [newProduct, ...prev]);
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id === activeRowIdForQuickProduct) {
+          let updated = {
+            ...item,
+            productName: newProduct.name,
+            product: newProduct._id,
+            hsnCode: newProduct.hsnCode || "",
+            unit: newProduct.unit || "Pcs",
+            rate: newProduct.purchasePrice || 0,
+            gstRate: newProduct.gstRate !== undefined ? newProduct.gstRate : 18,
+            isInclusive: false,
+          };
+          updated.total = calcItemTotal(updated);
+          return updated;
+        }
+        return item;
+      }),
+    );
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, makeItem()]);
+    setItems((prev) => [...prev, makeItem()]);
     setTimeout(() => {
-      tableBottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      tableBottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }, 50);
   };
 
   const removeItem = (id) => {
     if (items.length === 1) return;
-    setItems(prev => prev.filter(i => i.id !== id));
+    setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
   // Tax and Total calculations
@@ -346,7 +396,7 @@ const CreatePurchaseOrder = () => {
     let taxAmount = 0;
     if (item.isInclusive) {
       const baseRate = rate / (1 + gst / 100);
-      taxAmount = (rate * qty) - (baseRate * qty);
+      taxAmount = rate * qty - baseRate * qty;
     } else {
       const taxableAmount = rate * qty;
       taxAmount = (taxableAmount * gst) / 100;
@@ -356,10 +406,10 @@ const CreatePurchaseOrder = () => {
 
   const subtotal = itemsTotal - totalTax;
 
-  const selectedCompanyObj = companies.find(c => c._id === form.company);
-  const buyerGSTIN = selectedCompanyObj?.gstin || '';
+  const selectedCompanyObj = companies.find((c) => c._id === form.company);
+  const buyerGSTIN = selectedCompanyObj?.gstin || "";
   const buyerStateCode = buyerGSTIN.substring(0, 2);
-  const supplierGSTIN = form.supplierGSTIN || '';
+  const supplierGSTIN = form.supplierGSTIN || "";
   const sellerStateCode = supplierGSTIN.substring(0, 2);
   const isInterState = buyerStateCode && sellerStateCode && buyerStateCode !== sellerStateCode;
 
@@ -382,7 +432,7 @@ const CreatePurchaseOrder = () => {
       const payload = {
         ...form,
         supplierName: toProperCase(form.supplierName),
-        items: items.map(i => ({
+        items: items.map((i) => ({
           product: i.product || undefined,
           productName: i.productName,
           hsnCode: i.hsnCode,
@@ -392,7 +442,9 @@ const CreatePurchaseOrder = () => {
           gstRate: Number(i.gstRate),
           isInclusive: Boolean(i.isInclusive),
           taxableAmount: Number((i.isInclusive ? (i.rate / (1 + i.gstRate / 100)) * i.qty : i.rate * i.qty).toFixed(2)),
-          taxAmount: Number((i.total - (i.isInclusive ? (i.rate / (1 + i.gstRate / 100)) * i.qty : i.rate * i.qty)).toFixed(2)),
+          taxAmount: Number(
+            (i.total - (i.isInclusive ? (i.rate / (1 + i.gstRate / 100)) * i.qty : i.rate * i.qty)).toFixed(2),
+          ),
           total: Number(i.total),
         })),
         subtotal: Number(subtotal.toFixed(2)),
@@ -407,28 +459,36 @@ const CreatePurchaseOrder = () => {
       // Auto-create or update supplier in backend with phone, gstin, state, address for future auto-fill
       if (form.supplierName.trim()) {
         try {
-          await axios.post(`${API}/api/suppliers`, {
-            name: form.supplierName,
-            gstin: form.supplierGSTIN,
-            phone: form.supplierPhone,
-            address: form.billingAddress,
-            state: form.supplierState,
-          }, { headers: authHeader });
+          await axios.post(
+            `${API}/api/suppliers`,
+            {
+              name: form.supplierName,
+              gstin: form.supplierGSTIN,
+              phone: form.supplierPhone,
+              address: form.billingAddress,
+              state: form.supplierState,
+            },
+            { headers: authHeader },
+          );
         } catch (err) {
           // If already exists, update supplier info if provided
           try {
-            const existingSupp = suppliers.find(s => s.name?.toLowerCase() === form.supplierName.toLowerCase());
+            const existingSupp = suppliers.find((s) => s.name?.toLowerCase() === form.supplierName.toLowerCase());
             if (existingSupp?._id) {
-              await axios.put(`${API}/api/suppliers/${existingSupp._id}`, {
-                name: form.supplierName,
-                gstin: form.supplierGSTIN,
-                phone: form.supplierPhone,
-                address: form.billingAddress,
-                state: form.supplierState,
-              }, { headers: authHeader });
+              await axios.put(
+                `${API}/api/suppliers/${existingSupp._id}`,
+                {
+                  name: form.supplierName,
+                  gstin: form.supplierGSTIN,
+                  phone: form.supplierPhone,
+                  address: form.billingAddress,
+                  state: form.supplierState,
+                },
+                { headers: authHeader },
+              );
             }
           } catch (e) {
-            console.error('Updating supplier error:', e);
+            console.error("Updating supplier error:", e);
           }
         }
       }
@@ -448,79 +508,125 @@ const CreatePurchaseOrder = () => {
   };
 
   return (
-    <div className="sl-page" style={{ paddingBottom: '60px' }}>
+    <div className="sl-page" style={{ paddingBottom: "60px" }}>
       {/* Header */}
       <div className="sl-header">
         <div>
           <button
             type="button"
             onClick={() => navigate("/purchase-orders")}
-            style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#94a3b8",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "8px",
+            }}
           >
             <ArrowLeft size={16} /> Back to Purchase Orders
           </button>
           <h1 className="sl-title">{id ? "Edit Purchase Order" : "Create Purchase Order (PO)"}</h1>
-          <p className="sl-subtitle">Generate a purchase order for suppliers. Stock will NOT be affected until converted into a Purchase Invoice.</p>
+          <p className="sl-subtitle">
+            Generate a purchase order for suppliers. Stock will NOT be affected until converted into a Purchase Invoice.
+          </p>
         </div>
       </div>
 
       {/* Info Banner on Stock */}
-      <div style={{
-        background: 'rgba(59, 130, 246, 0.12)',
-        border: '1px solid rgba(59, 130, 246, 0.3)',
-        borderRadius: '8px',
-        padding: '12px 16px',
-        marginBottom: '20px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        color: '#60a5fa',
-        fontSize: '13px'
-      }}>
+      <div
+        style={{
+          background: "rgba(59, 130, 246, 0.12)",
+          border: "1px solid rgba(59, 130, 246, 0.3)",
+          borderRadius: "8px",
+          padding: "12px 16px",
+          marginBottom: "20px",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          color: "#60a5fa",
+          fontSize: "13px",
+        }}
+      >
         <Info size={20} style={{ flexShrink: 0 }} />
         <div>
-          <strong>No Stock Impact:</strong> Purchase Orders record your planned purchase requests. Stock levels remain untouched. Once the products arrive, click "Convert to Bill" to record the purchase invoice and update inventory.
+          <strong>No Stock Impact:</strong> Purchase Orders record your planned purchase requests. Stock levels remain
+          untouched. Once the products arrive, click "Convert to Bill" to record the purchase invoice and update
+          inventory.
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gap: "20px",
+            marginBottom: "20px",
+          }}
+        >
           {/* General PO Information */}
-          <div className="sl-table-wrap" style={{ padding: '20px' }}>
-            <h3 style={{ color: '#f8fafc', fontSize: '16px', marginBottom: '16px', fontWeight: 600 }}>PO Details</h3>
+          <div className="sl-table-wrap" style={{ padding: "20px" }}>
+            <h3 style={{ color: "#f8fafc", fontSize: "16px", marginBottom: "16px", fontWeight: 600 }}>PO Details</h3>
 
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>TARGET COMPANY *</label>
+            <div style={{ marginBottom: "14px" }}>
+              <label style={{ display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px" }}>
+                TARGET COMPANY *
+              </label>
               <select
                 className="sl-company-select"
-                style={{ width: '100%', padding: '10px' }}
+                style={{ width: "100%", padding: "10px" }}
                 value={form.company}
                 onChange={(e) => setForm({ ...form, company: e.target.value })}
                 disabled={Boolean(id)}
               >
-                {companies.map(c => (
-                  <option key={c._id} value={c._id}>{c.name}</option>
+                {companies.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
                 ))}
               </select>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>PO NUMBER *</label>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px" }}>
+                  PO NUMBER *
+                </label>
                 <input
                   type="text"
                   required
                   value={form.poNumber}
                   onChange={(e) => setForm({ ...form, poNumber: e.target.value })}
-                  style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#fff', fontSize: '13px' }}
+                  style={{
+                    width: "100%",
+                    background: "#0f172a",
+                    border: "1px solid #334155",
+                    borderRadius: "6px",
+                    padding: "10px",
+                    color: "#fff",
+                    fontSize: "13px",
+                  }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>STATUS</label>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px" }}>
+                  STATUS
+                </label>
                 <select
                   value={form.status}
                   onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#fff', fontSize: '13px' }}
+                  style={{
+                    width: "100%",
+                    background: "#0f172a",
+                    border: "1px solid #334155",
+                    borderRadius: "6px",
+                    padding: "10px",
+                    color: "#fff",
+                    fontSize: "13px",
+                  }}
                 >
                   <option value="Draft">Draft</option>
                   <option value="Issued">Issued</option>
@@ -530,35 +636,59 @@ const CreatePurchaseOrder = () => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>PO DATE *</label>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px" }}>
+                  PO DATE *
+                </label>
                 <input
                   type="date"
                   required
                   value={form.poDate}
                   onChange={(e) => setForm({ ...form, poDate: e.target.value })}
-                  style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#fff', fontSize: '13px' }}
+                  style={{
+                    width: "100%",
+                    background: "#0f172a",
+                    border: "1px solid #334155",
+                    borderRadius: "6px",
+                    padding: "10px",
+                    color: "#fff",
+                    fontSize: "13px",
+                  }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>EXPECTED DELIVERY</label>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px" }}>
+                  EXPECTED DELIVERY
+                </label>
                 <input
                   type="date"
                   value={form.expectedDeliveryDate}
                   onChange={(e) => setForm({ ...form, expectedDeliveryDate: e.target.value })}
-                  style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#fff', fontSize: '13px' }}
+                  style={{
+                    width: "100%",
+                    background: "#0f172a",
+                    border: "1px solid #334155",
+                    borderRadius: "6px",
+                    padding: "10px",
+                    color: "#fff",
+                    fontSize: "13px",
+                  }}
                 />
               </div>
             </div>
           </div>
 
           {/* Supplier Information */}
-          <div className="sl-table-wrap" style={{ padding: '20px' }}>
-            <h3 style={{ color: '#f8fafc', fontSize: '16px', marginBottom: '16px', fontWeight: 600 }}>Supplier Details</h3>
+          <div className="sl-table-wrap" style={{ padding: "20px" }}>
+            <h3 style={{ color: "#f8fafc", fontSize: "16px", marginBottom: "16px", fontWeight: 600 }}>
+              Supplier Details
+            </h3>
 
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>SUPPLIER NAME *</label>
+            <div style={{ marginBottom: "14px" }}>
+              <label style={{ display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px" }}>
+                SUPPLIER NAME *
+              </label>
               <CreatableSelect
                 options={supplierOptions}
                 value={form.supplierName}
@@ -567,70 +697,114 @@ const CreatePurchaseOrder = () => {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>SUPPLIER GSTIN</label>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px" }}>
+                  SUPPLIER GSTIN
+                </label>
                 <input
                   type="text"
                   value={form.supplierGSTIN}
                   onChange={(e) => setForm({ ...form, supplierGSTIN: e.target.value.toUpperCase() })}
-                  style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#fff', fontSize: '13px' }}
+                  style={{
+                    width: "100%",
+                    background: "#0f172a",
+                    border: "1px solid #334155",
+                    borderRadius: "6px",
+                    padding: "10px",
+                    color: "#fff",
+                    fontSize: "13px",
+                  }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>SUPPLIER PHONE</label>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px" }}>
+                  SUPPLIER PHONE
+                </label>
                 <input
                   type="text"
                   value={form.supplierPhone}
                   onChange={(e) => setForm({ ...form, supplierPhone: e.target.value })}
-                  style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#fff', fontSize: '13px' }}
+                  style={{
+                    width: "100%",
+                    background: "#0f172a",
+                    border: "1px solid #334155",
+                    borderRadius: "6px",
+                    padding: "10px",
+                    color: "#fff",
+                    fontSize: "13px",
+                  }}
                 />
               </div>
             </div>
 
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>SUPPLIER STATE</label>
+            <div style={{ marginBottom: "14px" }}>
+              <label style={{ display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px" }}>
+                SUPPLIER STATE
+              </label>
               <select
                 value={form.supplierState}
                 onChange={(e) => setForm({ ...form, supplierState: e.target.value })}
-                style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#fff', fontSize: '13px' }}
+                style={{
+                  width: "100%",
+                  background: "#0f172a",
+                  border: "1px solid #334155",
+                  borderRadius: "6px",
+                  padding: "10px",
+                  color: "#fff",
+                  fontSize: "13px",
+                }}
               >
                 <option value="">Select State</option>
-                {INDIAN_STATES.map(st => (
-                  <option key={st} value={st}>{st}</option>
+                {INDIAN_STATES.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>BILLING / SUPPLIER ADDRESS</label>
+              <label style={{ display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px" }}>
+                BILLING / SUPPLIER ADDRESS
+              </label>
               <textarea
                 rows={2}
                 value={form.billingAddress}
                 onChange={(e) => setForm({ ...form, billingAddress: e.target.value })}
-                style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#fff', fontSize: '13px' }}
+                style={{
+                  width: "100%",
+                  background: "#0f172a",
+                  border: "1px solid #334155",
+                  borderRadius: "6px",
+                  padding: "10px",
+                  color: "#fff",
+                  fontSize: "13px",
+                }}
               />
             </div>
           </div>
         </div>
 
         {/* Items Table */}
-        <div className="sl-table-wrap" style={{ padding: '20px', marginBottom: '20px', overflowX: 'auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ color: '#f8fafc', fontSize: '16px', fontWeight: 600 }}>Products in this PO</h3>
-            <span style={{ fontSize: '12px', color: '#94a3b8' }}>{items.length} item{items.length !== 1 ? 's' : ''}</span>
+        <div className="sl-table-wrap" style={{ padding: "20px", marginBottom: "20px", overflowX: "auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <h3 style={{ color: "#f8fafc", fontSize: "16px", fontWeight: 600 }}>Products in this PO</h3>
+            <span style={{ fontSize: "12px", color: "#94a3b8" }}>
+              {items.length} item{items.length !== 1 ? "s" : ""}
+            </span>
           </div>
 
           <table className="sl-table">
             <thead>
               <tr>
-                <th style={{ minWidth: '220px' }}>PRODUCT</th>
-                <th style={{ width: '90px' }}>QTY</th>
-                <th style={{ width: '120px' }}>RATE (₹)</th>
-                <th style={{ width: '90px' }}>GST %</th>
-                <th style={{ width: '70px', textAlign: 'center' }}>INCL?</th>
-                <th style={{ width: '130px' }}>TOTAL (₹)</th>
-                <th style={{ width: '50px', textAlign: 'center' }}>ACTION</th>
+                <th style={{ minWidth: "220px" }}>PRODUCT</th>
+                <th style={{ width: "90px" }}>QTY</th>
+                <th style={{ width: "120px" }}>RATE (₹)</th>
+                <th style={{ width: "90px" }}>GST %</th>
+                <th style={{ width: "70px", textAlign: "center" }}>INCL?</th>
+                <th style={{ width: "130px" }}>TOTAL (₹)</th>
+                <th style={{ width: "50px", textAlign: "center" }}>ACTION</th>
               </tr>
             </thead>
             <tbody>
@@ -639,7 +813,7 @@ const CreatePurchaseOrder = () => {
                   <td>
                     <CreatableSelect
                       value={item.productName}
-                      onChange={val => handleItemChange(item.id, 'productName', val)}
+                      onChange={(val) => handleItemChange(item.id, "productName", val)}
                       options={productOptions}
                       placeholder="Search or select product..."
                       onCreateOption={(name) => {
@@ -655,7 +829,15 @@ const CreatePurchaseOrder = () => {
                       min="1"
                       value={item.qty}
                       onChange={(e) => handleItemChange(item.id, "qty", e.target.value)}
-                      style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '13px' }}
+                      style={{
+                        width: "100%",
+                        background: "#0f172a",
+                        border: "1px solid #334155",
+                        borderRadius: "6px",
+                        padding: "8px",
+                        color: "#fff",
+                        fontSize: "13px",
+                      }}
                     />
                   </td>
                   <td>
@@ -664,21 +846,39 @@ const CreatePurchaseOrder = () => {
                       step="any"
                       value={item.rate}
                       onChange={(e) => handleItemChange(item.id, "rate", e.target.value)}
-                      style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '13px' }}
+                      style={{
+                        width: "100%",
+                        background: "#0f172a",
+                        border: "1px solid #334155",
+                        borderRadius: "6px",
+                        padding: "8px",
+                        color: "#fff",
+                        fontSize: "13px",
+                      }}
                     />
                   </td>
                   <td>
                     <select
                       value={item.gstRate}
                       onChange={(e) => handleItemChange(item.id, "gstRate", Number(e.target.value))}
-                      style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '13px' }}
+                      style={{
+                        width: "100%",
+                        background: "#0f172a",
+                        border: "1px solid #334155",
+                        borderRadius: "6px",
+                        padding: "8px",
+                        color: "#fff",
+                        fontSize: "13px",
+                      }}
                     >
-                      {GST_RATES.map(r => (
-                        <option key={r} value={r}>{r}%</option>
+                      {GST_RATES.map((r) => (
+                        <option key={r} value={r}>
+                          {r}%
+                        </option>
                       ))}
                     </select>
                   </td>
-                  <td style={{ textAlign: 'center' }}>
+                  <td style={{ textAlign: "center" }}>
                     <input
                       type="checkbox"
                       checked={item.isInclusive}
@@ -691,15 +891,29 @@ const CreatePurchaseOrder = () => {
                       step="any"
                       value={item.total}
                       onChange={(e) => handleItemChange(item.id, "total", e.target.value)}
-                      style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '8px', color: '#10b981', fontWeight: 'bold', fontSize: '13px' }}
+                      style={{
+                        width: "100%",
+                        background: "#0f172a",
+                        border: "1px solid #334155",
+                        borderRadius: "6px",
+                        padding: "8px",
+                        color: "#10b981",
+                        fontWeight: "bold",
+                        fontSize: "13px",
+                      }}
                     />
                   </td>
-                  <td style={{ textAlign: 'center' }}>
+                  <td style={{ textAlign: "center" }}>
                     <button
                       type="button"
                       onClick={() => removeItem(item.id)}
                       disabled={items.length === 1}
-                      style={{ background: 'transparent', border: 'none', color: items.length === 1 ? '#475569' : '#ef4444', cursor: items.length === 1 ? 'not-allowed' : 'pointer' }}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: items.length === 1 ? "#475569" : "#ef4444",
+                        cursor: items.length === 1 ? "not-allowed" : "pointer",
+                      }}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -713,142 +927,265 @@ const CreatePurchaseOrder = () => {
           <button
             type="button"
             onClick={addItem}
-            style={{ marginTop: '12px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6', borderRadius: '6px', padding: '8px 16px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600 }}
+            style={{
+              marginTop: "12px",
+              background: "rgba(59,130,246,0.15)",
+              border: "1px solid rgba(59,130,246,0.3)",
+              color: "#3b82f6",
+              borderRadius: "6px",
+              padding: "8px 16px",
+              fontSize: "13px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
           >
             <Plus size={16} /> Add Item
           </button>
         </div>
 
         {/* Charges & Summary */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gap: "20px",
+            marginBottom: "20px",
+          }}
+        >
           {/* Notes & Terms */}
-          <div className="sl-table-wrap" style={{ padding: '20px' }}>
-            <h3 style={{ color: '#f8fafc', fontSize: '16px', marginBottom: '16px', fontWeight: 600 }}>Notes & Terms</h3>
+          <div className="sl-table-wrap" style={{ padding: "20px" }}>
+            <h3 style={{ color: "#f8fafc", fontSize: "16px", marginBottom: "16px", fontWeight: 600 }}>Notes & Terms</h3>
 
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>Notes</label>
+            <div style={{ marginBottom: "14px" }}>
+              <label style={{ display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px" }}>Notes</label>
               <textarea
                 rows={2}
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 placeholder="Internal notes or instructions to supplier..."
-                style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#fff', fontSize: '13px' }}
+                style={{
+                  width: "100%",
+                  background: "#0f172a",
+                  border: "1px solid #334155",
+                  borderRadius: "6px",
+                  padding: "10px",
+                  color: "#fff",
+                  fontSize: "13px",
+                }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>Terms & Conditions</label>
+              <label style={{ display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px" }}>
+                Terms & Conditions
+              </label>
               <textarea
                 rows={3}
                 value={form.termsConditions}
                 onChange={(e) => setForm({ ...form, termsConditions: e.target.value })}
-                style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#fff', fontSize: '13px' }}
+                style={{
+                  width: "100%",
+                  background: "#0f172a",
+                  border: "1px solid #334155",
+                  borderRadius: "6px",
+                  padding: "10px",
+                  color: "#fff",
+                  fontSize: "13px",
+                }}
               />
             </div>
           </div>
 
           {/* Charges and Totals Summary */}
-          <div className="sl-table-wrap" style={{ padding: '20px' }}>
-            <h3 style={{ color: '#f8fafc', fontSize: '16px', marginBottom: '16px', fontWeight: 600 }}>Summary & Additional Charges</h3>
+          <div className="sl-table-wrap" style={{ padding: "20px" }}>
+            <h3 style={{ color: "#f8fafc", fontSize: "16px", marginBottom: "16px", fontWeight: 600 }}>
+              Summary & Additional Charges
+            </h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "10px" }}>
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Packaging Charges (₹)</label>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: "12px", marginBottom: "4px" }}>
+                  Packaging Charges (₹)
+                </label>
                 <input
                   type="number"
                   step="any"
                   value={form.packagingCharges}
                   onChange={(e) => setForm({ ...form, packagingCharges: e.target.value })}
-                  style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '13px' }}
+                  style={{
+                    width: "100%",
+                    background: "#0f172a",
+                    border: "1px solid #334155",
+                    borderRadius: "6px",
+                    padding: "8px",
+                    color: "#fff",
+                    fontSize: "13px",
+                  }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Transport Charges (₹)</label>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: "12px", marginBottom: "4px" }}>
+                  Transport Charges (₹)
+                </label>
                 <input
                   type="number"
                   step="any"
                   value={form.transportCharges}
                   onChange={(e) => setForm({ ...form, transportCharges: e.target.value })}
-                  style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '13px' }}
+                  style={{
+                    width: "100%",
+                    background: "#0f172a",
+                    border: "1px solid #334155",
+                    borderRadius: "6px",
+                    padding: "8px",
+                    color: "#fff",
+                    fontSize: "13px",
+                  }}
                 />
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Other Charges (₹)</label>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: "12px", marginBottom: "4px" }}>
+                  Other Charges (₹)
+                </label>
                 <input
                   type="number"
                   step="any"
                   value={form.otherCharges}
                   onChange={(e) => setForm({ ...form, otherCharges: e.target.value })}
-                  style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '13px' }}
+                  style={{
+                    width: "100%",
+                    background: "#0f172a",
+                    border: "1px solid #334155",
+                    borderRadius: "6px",
+                    padding: "8px",
+                    color: "#fff",
+                    fontSize: "13px",
+                  }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Adjustment (₹)</label>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: "12px", marginBottom: "4px" }}>
+                  Adjustment (₹)
+                </label>
                 <input
                   type="number"
                   step="any"
                   value={form.adjustment}
                   onChange={(e) => setForm({ ...form, adjustment: e.target.value })}
-                  style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '13px' }}
+                  style={{
+                    width: "100%",
+                    background: "#0f172a",
+                    border: "1px solid #334155",
+                    borderRadius: "6px",
+                    padding: "8px",
+                    color: "#fff",
+                    fontSize: "13px",
+                  }}
                 />
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid #334155', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '13px' }}>
+            <div
+              style={{
+                borderTop: "1px solid #334155",
+                paddingTop: "12px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: "13px" }}>
                 <span>Taxable Amount:</span>
                 <span>₹{subtotal.toFixed(2)}</span>
               </div>
-              {totalTax > 0 && (
-                isInterState ? (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '13px' }}>
+              {totalTax > 0 &&
+                (isInterState ? (
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: "13px" }}>
                     <span>IGST:</span>
                     <span>₹{totalTax.toFixed(2)}</span>
                   </div>
                 ) : (
                   <>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '13px' }}>
+                    <div
+                      style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: "13px" }}
+                    >
                       <span>CGST:</span>
                       <span>₹{(totalTax / 2).toFixed(2)}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '13px' }}>
+                    <div
+                      style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: "13px" }}
+                    >
                       <span>SGST:</span>
                       <span>₹{(totalTax / 2).toFixed(2)}</span>
                     </div>
                   </>
-                )
-              )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '13px' }}>
+                ))}
+              <div style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: "13px" }}>
                 <span>Items Total:</span>
                 <span>₹{itemsTotal.toFixed(2)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '13px' }}>
+              <div style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: "13px" }}>
                 <span>Extra Charges:</span>
                 <span>+₹{extraCharges.toFixed(2)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f8fafc', fontSize: '18px', fontWeight: 'bold', paddingTop: '8px', borderTop: '1px dashed #334155' }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  color: "#f8fafc",
+                  fontSize: "18px",
+                  fontWeight: "bold",
+                  paddingTop: "8px",
+                  borderTop: "1px dashed #334155",
+                }}
+              >
                 <span>Grand Total:</span>
-                <span style={{ color: '#10b981' }}>₹{grandTotal.toFixed(2)}</span>
+                <span style={{ color: "#10b981" }}>₹{grandTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Submit Actions */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
           <button
             type="button"
             onClick={() => navigate("/purchase-orders")}
-            style={{ background: '#334155', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontSize: '14px', cursor: 'pointer', fontWeight: 600 }}
+            style={{
+              background: "#334155",
+              color: "#fff",
+              border: "none",
+              borderRadius: "8px",
+              padding: "12px 24px",
+              fontSize: "14px",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
           >
             Cancel
           </button>
           <button
             type="submit"
-            style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px 28px', fontSize: '14px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)' }}
+            style={{
+              background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+              color: "#fff",
+              border: "none",
+              borderRadius: "8px",
+              padding: "12px 28px",
+              fontSize: "14px",
+              cursor: "pointer",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              boxShadow: "0 4px 14px rgba(59, 130, 246, 0.4)",
+            }}
           >
             <Save size={18} />
             {id ? "Update Purchase Order" : "Save Purchase Order"}

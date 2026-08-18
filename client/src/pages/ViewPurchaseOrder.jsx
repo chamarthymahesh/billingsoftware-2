@@ -62,8 +62,26 @@ const ViewPurchaseOrder = () => {
 
   const templates = company.invoiceTemplates || {};
   const primaryColor = templates.primaryColor || '#2563eb';
+  const secondaryColor = templates.secondaryColor || '#10b981';
+  const fontFamily = templates.fontFamily || 'Inter';
+  const addressFontSize = templates.companyAddressFontSize || '14px';
   const showLogo = templates.showLogo !== false;
+  const showSignature = templates.showSignature !== false;
   const logoImage = templates.logoImage || '';
+  const logoPosition = templates.logoPosition || 'left';
+  const metaPosition = templates.metaPosition || 'right';
+  const addressLayout = templates.addressLayout || 'side-by-side';
+  const signaturePosition = templates.signaturePosition || 'right';
+  const termsPosition = templates.termsPosition || 'left';
+  const tableStyle = templates.tableStyle || 'bordered';
+
+  let templateClass = 'template-Professional';
+  const headerStyle = templates.headerStyle || '';
+  if (headerStyle.includes('Modern')) {
+    templateClass = 'template-Modern';
+  } else if (headerStyle.includes('Classic')) {
+    templateClass = 'template-Classic';
+  }
 
   return (
     <div className="sl-page">
@@ -110,139 +128,189 @@ const ViewPurchaseOrder = () => {
       </div>
 
       {/* Main Printable Document Sheet */}
-      <div className="invoice-container template-Professional" style={{ fontFamily: templates.fontFamily || 'Inter, sans-serif' }}>
-        <div className="invoice-header" style={{ borderColor: primaryColor }}>
-          <div className="company-logo-section">
-            {showLogo && logoImage && (
-              <img src={logoImage} alt="Company Logo" className="invoice-logo" />
-            )}
-            <div>
-              <h2 className="company-name" style={{ color: primaryColor }}>{company.name || 'Company Name'}</h2>
-              <div className="company-details">
-                {company.address && <div>{company.address}</div>}
-                {company.phone && <div>Phone: {company.phone}</div>}
-                {company.email && <div>Email: {company.email}</div>}
-                {company.gstin && <div>GSTIN: {company.gstin}</div>}
-              </div>
-            </div>
-          </div>
+      <div className={`invoice-container ${templateClass}`} style={{
+        fontFamily: `${fontFamily}, sans-serif`,
+        '--primary-color': primaryColor,
+        '--secondary-color': secondaryColor,
+        '--secondary-bg-color': `${secondaryColor}15`,
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        {/* Top accent */}
+        <div style={{ height: '6px', background: primaryColor, borderRadius: '8px 8px 0 0', margin: '-48px -48px 24px -48px' }}></div>
 
-          <div className="invoice-meta">
-            <h1 style={{ color: primaryColor, margin: 0, fontSize: '24px', fontWeight: 800 }}>PURCHASE ORDER</h1>
-            <div style={{ marginTop: '10px' }}>
-              <div><strong>PO No:</strong> {po.poNumber}</div>
-              <div><strong>PO Date:</strong> {new Date(po.poDate).toLocaleDateString('en-IN')}</div>
-              {po.expectedDeliveryDate && (
-                <div><strong>Expected Delivery:</strong> {new Date(po.expectedDeliveryDate).toLocaleDateString('en-IN')}</div>
-              )}
-              <div><strong>Status:</strong> {po.status}</div>
+        {/* Company Header Block */}
+        <div className={`company-info header-logo-${logoPosition}`} style={{ fontSize: addressFontSize, marginBottom: '20px' }}>
+          {showLogo && logoImage ? (
+            <img src={logoImage} alt="Company Logo" style={{ maxHeight: '80px', marginBottom: '12px', objectFit: 'contain', display: 'inline-block' }} />
+          ) : (
+            <h1 className="company-name" style={{ color: primaryColor }}>{company.name || 'Company Name'}</h1>
+          )}
+          <p>{company.address}</p>
+          <p>GSTIN: {sellerGSTIN || 'N/A'} | Phone: {company.phone}</p>
+          {company.email && <p>Email: {company.email}</p>}
+        </div>
+
+        {/* Purchase Order Metadata Block */}
+        <div className={`invoice-meta header-meta-${metaPosition}`} style={{ marginBottom: '20px' }}>
+          <h2 className="invoice-type" style={{ background: `${primaryColor}15`, color: primaryColor }}>PURCHASE ORDER</h2>
+          <div className="meta-row">
+            <span className="meta-label">PO #:</span>
+            <span className="meta-value">{po.poNumber}</span>
+          </div>
+          <div className="meta-row">
+            <span className="meta-label">PO Date:</span>
+            <span className="meta-value">{new Date(po.poDate).toLocaleDateString('en-IN')}</span>
+          </div>
+          {po.expectedDeliveryDate && (
+            <div className="meta-row">
+              <span className="meta-label">Expected Delivery:</span>
+              <span className="meta-value">{new Date(po.expectedDeliveryDate).toLocaleDateString('en-IN')}</span>
             </div>
+          )}
+          <div className="meta-row">
+            <span className="meta-label">Status:</span>
+            <span className="meta-value">{po.status}</span>
           </div>
         </div>
 
-        {/* Addresses Section */}
-        <div className="addresses-container">
-          <div className="address-box">
-            <h4 style={{ color: primaryColor }}>Vendor / Supplier:</h4>
-            <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#1e293b' }}>{po.supplierName}</div>
-            {po.billingAddress && <div style={{ whiteSpace: 'pre-line' }}>{po.billingAddress}</div>}
-            {po.supplierPhone && <div>Phone: {po.supplierPhone}</div>}
-            {po.supplierGSTIN && <div>GSTIN: {po.supplierGSTIN}</div>}
-            {po.supplierState && <div>State: {po.supplierState}</div>}
+        <hr className="divider" />
+
+        {/* Billing & Shipping Section */}
+        <div className={`address-container layout-${addressLayout}`}>
+          <div className="bill-to-section">
+            <h3 className="section-title" style={{ color: primaryColor }}>Vendor / Supplier:</h3>
+            <div className="customer-info">
+              <h4 className="customer-name">{po.supplierName}</h4>
+              {po.billingAddress && <p>{po.billingAddress}</p>}
+              {po.supplierPhone && <p>Phone: {po.supplierPhone}</p>}
+              {isGst && po.supplierGSTIN && (
+                <p><strong>GSTIN: {po.supplierGSTIN}</strong></p>
+              )}
+              {po.supplierState && <p>State: {po.supplierState}</p>}
+            </div>
           </div>
 
-          <div className="address-box">
-            <h4 style={{ color: primaryColor }}>Deliver To / Buyer:</h4>
-            <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#1e293b' }}>{company.name}</div>
-            {company.address && <div style={{ whiteSpace: 'pre-line' }}>{company.address}</div>}
-            {company.phone && <div>Phone: {company.phone}</div>}
-            {company.gstin && <div>GSTIN: {company.gstin}</div>}
+          <div className="ship-to-section">
+            <h3 className="section-title" style={{ color: primaryColor }}>Deliver To / Buyer:</h3>
+            <div className="customer-info">
+              <h4 className="customer-name">{company.name}</h4>
+              {company.address && <p>{company.address}</p>}
+              {company.phone && <p>Phone: {company.phone}</p>}
+              {company.gstin && <p><strong>GSTIN: {company.gstin}</strong></p>}
+            </div>
           </div>
         </div>
 
         {/* Items Table */}
-        <table className="items-table bordered">
+        <table className={`invoice-table table-style-${tableStyle}`}>
           <thead>
-            <tr style={{ background: primaryColor, color: '#fff' }}>
-              <th style={{ width: '5%' }}>#</th>
-              <th style={{ width: '40%' }}>Product / Description</th>
-              <th>HSN</th>
+            <tr style={{ background: '#f8fafc', borderBottom: `2px solid ${primaryColor}` }}>
+              <th>Description</th>
+              {isGst && <th>HSN</th>}
               <th>Qty</th>
-              <th>Rate (₹)</th>
-              {isGst && <th>GST %</th>}
-              <th style={{ textAlign: 'right' }}>Total (₹)</th>
+              <th>Rate</th>
+              {isGst && <th>GST%</th>}
+              <th className="text-right">Amount</th>
             </tr>
           </thead>
           <tbody>
             {po.items?.map((item, index) => (
               <tr key={index}>
-                <td>{index + 1}</td>
                 <td>
-                  <div style={{ fontWeight: 600 }}>{item.productName}</div>
+                  <div className="item-desc">{item.productName}</div>
                 </td>
-                <td>{item.hsnCode || '-'}</td>
+                {isGst && <td>{item.hsnCode || '—'}</td>}
                 <td>{item.qty} {item.unit || 'Pcs'}</td>
-                <td>₹{(item.rate || 0).toFixed(2)}</td>
+                <td>₹{Number(item.rate || 0).toFixed(2)}</td>
                 {isGst && <td>{item.gstRate || 0}%</td>}
-                <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{(item.total || 0).toFixed(2)}</td>
+                <td className="text-right">₹{Number(item.total || 0).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        {/* Totals Section */}
-        <div className="totals-section">
-          <div className="notes-terms" style={{ flex: 1 }}>
-            {po.notes && (
-              <div style={{ marginBottom: '16px' }}>
-                <h4 style={{ color: primaryColor, margin: '0 0 4px 0' }}>Notes:</h4>
-                <p style={{ margin: 0, fontSize: '13px', color: '#475569', whiteSpace: 'pre-line' }}>{po.notes}</p>
+        {/* Summary Section */}
+        <div className={`invoice-summary-container layout-terms-${termsPosition}`}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
+            {(po.notes || po.termsConditions) && (
+              <div className="invoice-notes">
+                <h4 className="notes-title" style={{ color: primaryColor }}>Notes & Terms</h4>
+                {po.notes && <p style={{ whiteSpace: 'pre-line', marginBottom: '8px' }}><strong>Notes:</strong> {po.notes}</p>}
+                {po.termsConditions && <p style={{ whiteSpace: 'pre-line' }}><strong>Terms & Conditions:</strong> {po.termsConditions}</p>}
               </div>
             )}
-            {po.termsConditions && (
-              <div>
-                <h4 style={{ color: primaryColor, margin: '0 0 4px 0' }}>Terms & Conditions:</h4>
-                <p style={{ margin: 0, fontSize: '12px', color: '#64748b', whiteSpace: 'pre-line' }}>{po.termsConditions}</p>
+
+            {company.bankDetails?.bankName && (
+              <div className="bank-details-info" style={{ marginTop: 0 }}>
+                <h4 className="notes-title" style={{ color: primaryColor }}>Bank Details</h4>
+                <div className="bank-grid">
+                  <p><span>Bank:</span> {company.bankDetails.bankName}</p>
+                  <p><span>A/c No:</span> {company.bankDetails.accountNumber}</p>
+                  <p><span>IFSC:</span> {company.bankDetails.ifscCode}</p>
+                  {company.bankDetails.branchName && <p><span>Branch:</span> {company.bankDetails.branchName}</p>}
+                </div>
               </div>
             )}
           </div>
 
-          <div className="totals-table" style={{ minWidth: '280px' }}>
-            <div className="total-row">
+          <div className="summary-details">
+            <div className="summary-row">
               <span>Subtotal:</span>
               <span>₹{(po.subtotal || 0).toFixed(2)}</span>
             </div>
             {isGst && (
-              <div className="total-row">
-                <span>Tax Amount (GST):</span>
-                <span>₹{(po.totalTax || 0).toFixed(2)}</span>
-              </div>
+              <>
+                {isInterState ? (
+                  <div className="summary-row">
+                    <span>IGST:</span>
+                    <span>₹{(po.totalTax || 0).toFixed(2)}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="summary-row">
+                      <span>CGST:</span>
+                      <span>₹{((po.totalTax || 0) / 2).toFixed(2)}</span>
+                    </div>
+                    <div className="summary-row">
+                      <span>SGST:</span>
+                      <span>₹{((po.totalTax || 0) / 2).toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
+                <div className="summary-row highlight">
+                  <span>Total Tax:</span>
+                  <span>₹{(po.totalTax || 0).toFixed(2)}</span>
+                </div>
+              </>
             )}
+
             {Boolean(po.packagingCharges) && (
-              <div className="total-row">
+              <div className="summary-row">
                 <span>Packaging Charges:</span>
                 <span>₹{(po.packagingCharges).toFixed(2)}</span>
               </div>
             )}
             {Boolean(po.transportCharges) && (
-              <div className="total-row">
+              <div className="summary-row">
                 <span>Transport Charges:</span>
                 <span>₹{(po.transportCharges).toFixed(2)}</span>
               </div>
             )}
             {Boolean(po.otherCharges) && (
-              <div className="total-row">
+              <div className="summary-row">
                 <span>Other Charges:</span>
                 <span>₹{(po.otherCharges).toFixed(2)}</span>
               </div>
             )}
             {Boolean(po.adjustment) && (
-              <div className="total-row">
+              <div className="summary-row">
                 <span>Adjustment:</span>
                 <span>₹{(po.adjustment).toFixed(2)}</span>
               </div>
             )}
-            <div className="total-row grand-total" style={{ borderTop: `2px solid ${primaryColor}`, color: primaryColor }}>
+
+            <div className="summary-row grand-total">
               <span>Grand Total:</span>
               <span>₹{(po.grandTotal || 0).toFixed(2)}</span>
             </div>
@@ -250,15 +318,23 @@ const ViewPurchaseOrder = () => {
         </div>
 
         {/* Footer Signature area */}
-        <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '12px', color: '#94a3b8' }}>
-            This is a computer-generated Purchase Order.
+        {showSignature && (
+          <div className={`invoice-footer align-sig-${signaturePosition}`}>
+            <div className="footer-sign">
+              {company.signatureImage ? (
+                <img
+                  src={company.signatureImage}
+                  alt="Digital Signature"
+                  style={{ maxHeight: '80px', maxWidth: '200px', objectFit: 'contain', marginBottom: '10px' }}
+                />
+              ) : (
+                <div style={{ height: '80px' }}></div>
+              )}
+              <div className="sign-line"></div>
+              <p>Authorized Signatory</p>
+            </div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '13px', fontWeight: 'bold', marginBottom: '40px' }}>For {company.name}</div>
-            <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '4px', fontSize: '12px', color: '#64748b' }}>Authorized Signatory</div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
