@@ -8,7 +8,7 @@
 .emp-avatar {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, var(--primary), #8b5cf6);
+  background: linear-gradient(135deg, var(--primary, #3b82f6), #8b5cf6);
   color: white;
   border-radius: 10px;
   display: flex;
@@ -17,7 +17,7 @@
   font-weight: 700;
   font-size: 1rem;
   flex-shrink: 0;
-  box-shadow: 0 4px 10px var(--primary-glow);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
 }
 
 /* ─── Tabs ────────────────────────────────────────── */
@@ -30,66 +30,132 @@
 
 .tab-btn {
   padding: 9px 20px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
+  background: var(--bg-elevated, #1e293b);
+  border: 1px solid var(--border, #334155);
+  border-radius: var(--radius-sm, 8px);
+  color: var(--text-muted, #94a3b8);
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.2s ease;
   font-weight: 600;
   font-size: 0.85rem;
 }
 
 .tab-btn:hover {
-  background: var(--bg-card-hover);
-  color: var(--text-sub);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
 }
 
 .tab-btn.active {
-  background: linear-gradient(135deg, var(--primary), #2563eb);
+  background: linear-gradient(135deg, var(--primary, #3b82f6), #2563eb);
   color: white;
   border-color: transparent;
-  box-shadow: 0 4px 12px var(--primary-glow);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
-/* ─── Pay Button ──────────────────────────────────── */
+/* ─── Pay & Advance Buttons ───────────────────────── */
 .btn-pay {
-  background: var(--accent-subtle);
-  color: var(--accent);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  padding: 6px 14px;
-  border-radius: 7px;
-  font-size: 0.82rem;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.2s ease;
 }
 
 .btn-pay:hover {
-  background: var(--accent);
+  background: #10b981;
   color: white;
-  box-shadow: 0 4px 12px var(--accent-glow);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
-/* ─── Month Badge ─────────────────────────────────── */
+.btn-advance {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-advance:hover {
+  background: #f59e0b;
+  color: white;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+/* ─── Badges ─────────────────────────────────── */
 .month-badge {
-  background: var(--bg-elevated);
+  background: var(--bg-elevated, #1e293b);
   padding: 4px 12px;
   border-radius: 6px;
   font-size: 0.82rem;
   font-weight: 600;
-  color: var(--text-sub);
-  border: 1px solid var(--border);
+  color: #cbd5e1;
+  border: 1px solid var(--border, #334155);
+}
+
+.advance-pill {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.type-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.type-badge.salary {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.type-badge.advance {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.type-badge.bonus {
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.type-badge.deduction {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 /* ─── Small Modal ─────────────────────────────────── */
 .small-modal {
-  max-width: 420px !important;
+  max-width: 480px !important;
 }
 
 /* ─── Amount Cell ─────────────────────────────────── */
 .amount-cell.positive {
-  color: var(--accent);
+  color: #10b981;
+  font-weight: 700;
+}
+
+.amount-cell.advance-amount {
+  color: #f59e0b;
   font-weight: 700;
 }
 
@@ -103,13 +169,13 @@
 }
 
 .status-badge.active {
-  background: var(--accent-subtle);
-  color: var(--accent);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .status-badge.inactive {
-  background: var(--danger-subtle);
-  color: var(--danger);
-  border: 1px solid rgba(244, 63, 94, 0.2);
+  background: rgba(244, 63, 94, 0.15);
+  color: #f43f5e;
+  border: 1px solid rgba(244, 63, 94, 0.3);
 }

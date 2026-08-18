@@ -25,6 +25,9 @@ import ViewPreOrder from "./pages/ViewPreOrder";
 import DeliveryChallans from "./pages/DeliveryChallans";
 import CreateDeliveryChallan from "./pages/CreateDeliveryChallan";
 import ViewDeliveryChallan from "./pages/ViewDeliveryChallan";
+import PurchaseOrders from "./pages/PurchaseOrders";
+import CreatePurchaseOrder from "./pages/CreatePurchaseOrder";
+import ViewPurchaseOrder from "./pages/ViewPurchaseOrder";
 
 // Personal Finance Imports
 import Landing from "./components/personal/Landing";
@@ -77,6 +80,10 @@ function App() {
           <Route path="companies" element={<Companies />} />
           <Route path="products" element={<Products />} />
           <Route path="purchases" element={<Purchases />} />
+          <Route path="purchase-orders" element={<PurchaseOrders />} />
+          <Route path="purchase-orders/new" element={<CreatePurchaseOrder />} />
+          <Route path="purchase-orders/edit/:id" element={<CreatePurchaseOrder />} />
+          <Route path="purchase-orders/view/:id" element={<ViewPurchaseOrder />} />
           <Route path="sales" element={<Sales />} />
           <Route path="sales/new" element={<CreateInvoice />} />
           <Route path="sales/edit/:id" element={<CreateInvoice />} />

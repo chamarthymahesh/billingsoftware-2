@@ -171,20 +171,42 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
     }
   }, [showGlobal, form.targetCompany, isOpen]);
 
-  const combinedSuppliers = [
-    ...modalSuppliers.map(s => ({
-      name: s.name || s,
-      gstin: s.gstin || '',
-      isCompany: false
-    })),
-    ...modalCompanies.map(c => ({
-      name: c.name,
-      gstin: c.gstin || '',
-      isCompany: true
-    }))
-  ];
+  const combinedSuppliersMap = new Map();
 
-  const supplierOptions = [...new Set(combinedSuppliers.map(s => toProperCase(s.name)))].filter(Boolean);
+  const addSupplierToMap = (name, gstin, phone, address) => {
+    if (!name || typeof name !== 'string') return;
+    const key = name.trim().toLowerCase();
+    if (!key) return;
+
+    const existing = combinedSuppliersMap.get(key) || {
+      name: toProperCase(name.trim()),
+      gstin: '',
+      phone: '',
+      address: '',
+    };
+
+    combinedSuppliersMap.set(key, {
+      name: existing.name || toProperCase(name.trim()),
+      gstin: gstin || existing.gstin || '',
+      phone: phone || existing.phone || '',
+      address: address || existing.address || '',
+    });
+  };
+
+  modalSuppliers.forEach(s => {
+    const name = typeof s === 'string' ? s : s.name;
+    const gstin = typeof s === 'object' ? s.gstin : '';
+    const phone = typeof s === 'object' ? s.phone : '';
+    const address = typeof s === 'object' ? (s.address || s.billingAddress) : '';
+    addSupplierToMap(name, gstin, phone, address);
+  });
+
+  modalCompanies.forEach(c => {
+    addSupplierToMap(c.name, c.gstin, c.phone, c.address);
+  });
+
+  const combinedSuppliers = Array.from(combinedSuppliersMap.values());
+  const supplierOptions = combinedSuppliers.map(s => s.name);
   const productOptions = [...new Set(localProducts.map(p => toProperCase(p.name)))].filter(Boolean);
 
   const handleInput = (e) => {
@@ -193,12 +215,16 @@ const RecordPurchaseModal = ({ isOpen, onClose, companies, suppliers, products, 
   };
 
   const handleSupplierChange = (val) => {
-    const supp = combinedSuppliers.find(s => s.name.toLowerCase() === val.toLowerCase());
+    if (!val) return;
+    const key = val.trim().toLowerCase();
+    const supp = combinedSuppliersMap.get(key) || combinedSuppliers.find(s => s.name.toLowerCase() === key);
     if (supp) {
       setForm(f => ({
         ...f,
         supplierName: supp.name,
         supplierGSTIN: supp.gstin || '',
+        supplierPhone: supp.phone || '',
+        billingAddress: supp.address || '',
       }));
     } else {
       setForm(f => ({ ...f, supplierName: toProperCase(val) }));

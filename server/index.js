@@ -15,6 +15,7 @@ import supplierRoutes from "./routes/supplierRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import personalFinanceRoutes from "./routes/personalFinanceRoutes.js";
 import employeeRoutes from "./routes/employeeRoutes.js";
+import purchaseOrderRoutes from "./routes/purchaseOrderRoutes.js";
 import { protect } from "./middleware/authMiddleware.js";
 
 dotenv.config();
@@ -35,6 +36,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/companies", companyRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/purchases", purchaseRoutes);
+app.use("/api/purchase-orders", purchaseOrderRoutes);
 app.use("/api/invoices", invoiceRoutes);
 app.use("/api/quotations", quotationRoutes);
 app.use("/api/pre-orders", preOrderRoutes);

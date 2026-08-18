@@ -23,7 +23,8 @@ import {
   Car,
   Building,
   Truck,
-  Clock
+  Clock,
+  ShoppingBag
 } from "lucide-react";
 import "./Sidebar.css";
 
@@ -46,6 +47,7 @@ const Sidebar = () => {
     { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
     { name: "Companies", path: "/companies", icon: Building2 },
     { name: "Purchases", path: "/purchases", icon: ShoppingCart },
+    { name: "Purchase Orders", path: "/purchase-orders", icon: ShoppingBag },
     { name: "Sales", path: "/sales", icon: TrendingUp },
     { name: "Quotations", path: "/quotations", icon: FileText },
     { name: "Pre Orders", path: "/pre-orders", icon: Clock },
